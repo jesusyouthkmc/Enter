@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Jesus Youth KMC | Enter</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    /* ========== MAIN ORANGE GRADIENT BACKGROUND (always visible) ========== */
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #FF8C42 0%, #FF6B35 50%, #F25E2C 100%);
+      font-family: system-ui, 'Segoe UI', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* ========== LAYERS THAT WILL FADE OUT ========== */
+    /* Animated gradient overlay (subtle shift) */
+    .animated-gradient {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(
+        125deg,
+        rgba(255, 140, 66, 0.2) 0%,
+        rgba(255, 107, 53, 0.3) 30%,
+        rgba(242, 94, 44, 0.2) 60%,
+        rgba(255, 140, 66, 0.2) 100%
+      );
+      background-size: 200% 200%;
+      animation: shiftGradient 12s ease infinite;
+      pointer-events: none;
+      z-index: 1;
+      transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    @keyframes shiftGradient {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    /* Subtle vignette effect (keeps depth) */
+    .vignette {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(ellipse at center, transparent 0%, rgba(0, 0, 0, 0.12) 100%);
+      pointer-events: none;
+      z-index: 5;
+      transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Background watermark logo (only decorative, will fade) */
+    .bg-logo-watermark {
+      position: fixed;
+      pointer-events: none;
+      z-index: 0;
+      object-fit: contain;
+      bottom: 20px;
+      right: -100px;
+      width: 70%;
+      max-width: 800px;
+      opacity: 0.12;
+      animation: subtleFloat 8s ease-in-out infinite;
+      transition: opacity 0.7s ease;
+    }
+
+    @keyframes subtleFloat {
+      0%, 100% { transform: translateY(0px) translateX(0px); }
+      50% { transform: translateY(-10px) translateX(5px); }
+    }
+
+    @media (min-width: 768px) {
+      .bg-logo-watermark {
+        right: -150px;
+        bottom: 50px;
+        width: 60%;
+        opacity: 0.1;
+      }
+    }
+    @media (min-width: 1024px) {
+      .bg-logo-watermark {
+        right: -200px;
+        bottom: 80px;
+        width: 50%;
+        opacity: 0.08;
+      }
+    }
+
+    /* ========== ENTER BUTTON CONTAINER (fades out) ========== */
+    .enter-wrapper {
+      position: relative;
+      z-index: 30;
+      text-align: center;
+      transition: opacity 0.7s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s ease;
+    }
+
+    .enter-btn {
+      background: white;
+      color: #FF6B35;
+      font-weight: 700;
+      font-size: 1.5rem;
+      padding: 1rem 3rem;
+      border-radius: 60px;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+      letter-spacing: 2px;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      font-family: inherit;
+    }
+
+    .enter-btn:hover {
+      transform: scale(1.03);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+    }
+
+    /* ========== LOGO THAT WILL RISE (initially hidden off-screen) ========== */
+    .hero-logo {
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%) translateY(100vh);
+      bottom: 0;
+      width: 180px;
+      max-width: 55vw;
+      z-index: 200;
+      pointer-events: none;
+      transition: transform 1.2s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+      will-change: transform;
+      filter: drop-shadow(0 4px 12px rgba(0,0,0,0.2));
+    }
+
+    /* When logo reaches center + subtle glow + final rise */
+    .hero-logo.rise-to-center {
+      transform: translateX(-50%) translateY(-50%);
+      top: 50%;
+      bottom: auto;
+    }
+
+    /* subtle glow once after reaching center */
+    .hero-logo.glow-effect {
+      animation: gentleGlow 0.6s ease-out forwards;
+    }
+
+    @keyframes gentleGlow {
+      0% {
+        filter: drop-shadow(0 0 0 rgba(255,255,255,0));
+      }
+      40% {
+        filter: drop-shadow(0 0 18px rgba(255,255,255,0.7)) drop-shadow(0 0 8px #FF8C42);
+      }
+      100% {
+        filter: drop-shadow(0 4px 12px rgba(0,0,0,0.2));
+      }
+    }
+
+    /* final exit: rise upward smoothly */
+    .hero-logo.exit-upward {
+      transform: translateX(-50%) translateY(-150vh);
+      transition: transform 1s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ensure everything except gradient fades */
+    .fade-out-element {
+      transition: opacity 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* hide elements after fade out */
+    .hidden-layer {
+      opacity: 0 !important;
+      pointer-events: none;
+    }
+
+    /* no extra content flash */
+    .no-scroll {
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- PERMANENT ORANGE GRADIENT BACKGROUND – visible all time -->
+  <!-- Animated extra depth layer (will fade) -->
+  <div class="animated-gradient" id="gradientLayer"></div>
+  <!-- Vignette (will fade) -->
+  <div class="vignette" id="vignetteLayer"></div>
+
+  <!-- Watermark background logo (will fade) -->
+  <img src="logo.png" alt="bg watermark" class="bg-logo-watermark" id="watermarkLogo">
+
+  <!-- MAIN ENTER BUTTON SECTION (fades away) -->
+  <div class="enter-wrapper" id="enterWrapper">
+    <button class="enter-btn" id="enterBtn">ENTER</button>
+  </div>
+
+  <!-- CENTRAL LOGO that will animate: rises from bottom, glows, then rises up -->
+  <img src="logo.png" alt="Jesus Youth KMC Logo" class="hero-logo" id="heroLogo">
+
+  <script>
+    (function() {
+      // ----- ELEMENTS -----
+      const enterBtn = document.getElementById('enterBtn');
+      const enterWrapper = document.getElementById('enterWrapper');
+      const gradientOverlay = document.getElementById('gradientLayer');
+      const vignette = document.getElementById('vignetteLayer');
+      const watermark = document.getElementById('watermarkLogo');
+      const heroLogo = document.getElementById('heroLogo');
+
+      // Flags to prevent multiple triggers
+      let animationStarted = false;
+      let glowCompleted = false;
+
+      // Helper to fade out all non-gradient UI elements
+      function fadeOutAllExceptGradient() {
+        // Fade out enter button container
+        if (enterWrapper) enterWrapper.classList.add('hidden-layer');
+        // Fade out watermark logo
+        if (watermark) watermark.style.transition = 'opacity 0.7s ease';
+        if (watermark) watermark.style.opacity = '0';
+        // Fade out gradient overlay (still gradient bg remains under it)
+        if (gradientOverlay) gradientOverlay.classList.add('hidden-layer');
+        // Fade out vignette
+        if (vignette) vignette.classList.add('hidden-layer');
+        // Also any potential extra elements (like subtle decorative extras)
+        // Ensure pointer events removed from faded wrappers
+        if (enterWrapper) enterWrapper.style.pointerEvents = 'none';
+      }
+
+      // Step 1: logo rises from bottom to center
+      function riseLogoToCenter() {
+        if (!heroLogo) return;
+        // Force a reflow to ensure animation triggers
+        heroLogo.style.transform = 'translateX(-50%) translateY(100vh)';
+        // Small delay to allow style recalc
+        setTimeout(() => {
+          heroLogo.classList.add('rise-to-center');
+          // Listen for transition end to trigger glow
+          const onTransitionEnd = () => {
+            heroLogo.removeEventListener('transitionend', onTransitionEnd);
+            // Now logo is centered -> apply subtle glow once
+            if (!glowCompleted) {
+              heroLogo.classList.add('glow-effect');
+              // After glow finishes, continue to final rise
+              setTimeout(() => {
+                finishAnimationAndRedirect();
+              }, 600); // matches glow duration (0.6s)
+              glowCompleted = true;
+            }
+          };
+          heroLogo.addEventListener('transitionend', onTransitionEnd, { once: true });
+          // Fallback in case transitionend is not reliable (safeguard)
+          setTimeout(() => {
+            if (!glowCompleted) {
+              heroLogo.classList.add('glow-effect');
+              setTimeout(() => {
+                finishAnimationAndRedirect();
+              }, 550);
+              glowCompleted = true;
+            }
+          }, 1300);
+        }, 30);
+      }
+
+      // Step 2: after glow, logo rises upward off-screen, then redirect
+      function finishAnimationAndRedirect() {
+        if (!heroLogo) return;
+        // remove the previous center class to avoid conflict, but keep transform
+        heroLogo.classList.remove('rise-to-center');
+        // add exit upward class
+        heroLogo.classList.add('exit-upward');
+        // wait for upward animation to finish before redirect
+        const onExitEnd = () => {
+          heroLogo.removeEventListener('transitionend', onExitEnd);
+          // redirect to target website
+          window.location.href = 'https://jesusyouthkmc.github.io/jykmc.github.io/';
+        };
+        heroLogo.addEventListener('transitionend', onExitEnd, { once: true });
+        // fallback redirect if transition doesn't fire (safety)
+        setTimeout(() => {
+          window.location.href = 'https://jesusyouthkmc.github.io/jykmc.github.io/';
+        }, 1200);
+      }
+
+      // MAIN ENTRY: triggered by ENTER button
+      function startFullExperience() {
+        if (animationStarted) return;
+        animationStarted = true;
+
+        // 1. Fade out everything except the solid gradient background
+        fadeOutAllExceptGradient();
+
+        // 2. after fade out completes (approx 0.7s), start logo rising from bottom
+        setTimeout(() => {
+          riseLogoToCenter();
+        }, 700);
+      }
+
+      // Attach event to ENTER button (with slight haptic / feel)
+      if (enterBtn) {
+        enterBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          startFullExperience();
+        });
+      }
+
+      // Preload / minor fallback: ensure logo is at bottom initially
+      if (heroLogo) {
+        heroLogo.style.transform = 'translateX(-50%) translateY(100vh)';
+        heroLogo.style.opacity = '1';
+      }
+
+      // Also, ensure background orange gradient stays strong (no fading)
+      // The .animated-gradient fades but the body background remains visible.
+      // For extra robustness, set body background permanent.
+    })();
+  </script>
+</body>
+</html>
