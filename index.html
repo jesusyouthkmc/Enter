@@ -85,7 +85,7 @@
       }
     }
 
-    /* ===== RISING LOGO (more subtle opacity) ===== */
+    /* ===== RISING LOGO ===== */
     .rising-logo {
       position: fixed;
       pointer-events: none;
@@ -117,7 +117,7 @@
       transition: opacity 0.55s cubic-bezier(0.2, 0.9, 0.4, 1.1);
     }
 
-    /* ===== PULSING ANIMATION FOR ENTER BUTTON ===== */
+    /* ===== PULSING ANIMATION FOR ENTER BUTTON (exactly from your main site) ===== */
     @keyframes pulse {
       0% {
         transform: scale(1);
@@ -142,7 +142,7 @@
       transform: scale(1.05);
     }
 
-    /* ENTER button styling */
+    /* ENTER button styling (glass pill) */
     .enter-btn {
       background: rgba(255, 255, 255, 0.12);
       backdrop-filter: blur(10px);
@@ -159,6 +159,7 @@
       font-family: inherit;
     }
 
+    /* hover effect in addition to pulse override */
     .enter-btn:hover {
       transform: scale(1.05);
       background: rgba(255, 255, 255, 0.2);
@@ -191,7 +192,7 @@
       visibility: hidden;
     }
 
-    /* ----- ANIMATION SEQUENCE FOR RISING LOGO (subtle opacity: 0.35) ----- */
+    /* ----- ANIMATION SEQUENCE FOR RISING LOGO ----- */
     @keyframes riseToCenter {
       0% {
         bottom: -250px;
@@ -199,12 +200,12 @@
         transform: translateX(-50%) scale(0.94);
       }
       35% {
-        opacity: 0.4;
+        opacity: 0.7;
       }
       100% {
         bottom: 50%;
         transform: translate(-50%, 50%) scale(1);
-        opacity: 0.35;   /* subtle 35% opacity at center */
+        opacity: 0.65;
       }
     }
 
@@ -213,10 +214,10 @@
         filter: drop-shadow(0 0 0px rgba(255,255,200,0));
       }
       50% {
-        filter: drop-shadow(0 0 12px rgba(255,220,150,0.4)) drop-shadow(0 0 4px rgba(255,140,66,0.3));
+        filter: drop-shadow(0 0 12px rgba(255,220,150,0.5)) drop-shadow(0 0 4px rgba(255,140,66,0.4));
       }
       100% {
-        filter: drop-shadow(0 0 2px rgba(255,255,210,0.15));
+        filter: drop-shadow(0 0 2px rgba(255,255,210,0.2));
       }
     }
 
@@ -224,7 +225,7 @@
       0% {
         bottom: 50%;
         transform: translate(-50%, 50%) scale(1);
-        opacity: 0.35;
+        opacity: 0.65;
       }
       100% {
         bottom: 140%;
@@ -254,7 +255,7 @@
   <!-- RISING LOGO -->
   <img src="logo.png" alt="Jesus Youth KMC" class="rising-logo" id="risingLogo">
 
-  <!-- ENTER BUTTON CONTAINER -->
+  <!-- ENTER BUTTON CONTAINER with pulse animation -->
   <div id="enterContainer" class="enter-container">
     <button id="enterBtn" class="enter-btn pulse-button">ENTER</button>
     <div class="launch-sub">Jesus Youth KMC · Medical College Campus Ministry</div>
@@ -279,13 +280,13 @@
         if (animationInProgress) return;
         animationInProgress = true;
 
-        // disable button and remove pulse class
+        // disable button and remove pulse class to prevent further animation interference
         enterBtn.disabled = true;
         enterBtn.classList.remove('pulse-button');
         enterBtn.style.animation = 'none';
         document.body.style.cursor = 'wait';
 
-        // Fade out ENTER button container + background watermark logo
+        // 1️⃣ Fade out ENTER button container + background watermark logo
         container.classList.add('fade-out');
         if (bgWatermark) bgWatermark.classList.add('fade-out');
 
@@ -293,7 +294,7 @@
           container.style.visibility = 'hidden';
           if (bgWatermark) bgWatermark.style.visibility = 'hidden';
           
-          // Prepare rising logo
+          // 2️⃣ Prepare rising logo
           risingLogo.style.visibility = 'visible';
           risingLogo.style.opacity = '0';
           risingLogo.style.bottom = '-250px';
@@ -302,10 +303,10 @@
           // force reflow
           void risingLogo.offsetHeight;
           
-          // trigger the 3-step animation
+          // 3️⃣ trigger the 3-step animation
           risingLogo.classList.add('logo-animate-sequence');
           
-          // redirect after animation completes
+          // 4️⃣ redirect after animation completes
           const logoAnimationDuration = 2850;
           setTimeout(() => {
             window.location.href = targetURL;
