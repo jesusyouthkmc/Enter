@@ -373,11 +373,11 @@
   <!-- ENTER BUTTON CONTAINER -->
   <div id="enterContainer" class="enter-container">
     <button id="enterBtn" class="enter-btn pulse-button">ENTER</button>
-    <div class="launch-sub">Jesus Youth KMC · Medical College Campus Ministry</div>
+    <div class="launch-sub">Jesus Youth KMC · Kottayam Medical College Campus Ministry</div>
   </div>
 
-  <!-- Audio element for sound effect with iOS support -->
-  <audio id="clickSound" preload="auto" crossorigin="anonymous"></audio>
+  <!-- Simple audio element -->
+  <audio id="clickSound" preload="auto"></audio>
 
   <script>
     (function() {
@@ -390,87 +390,52 @@
       const targetURL = 'https://jesusyouthkmc.github.io/jykmc.github.io/';
 
       let animationInProgress = false;
-      let soundPlayed = false;
       let ripplesTriggered = false;
-      let audioUnlocked = false;
 
-      // ===== SOUND SETUP WITH iOS/iPad SUPPORT =====
-      const soundFile = 'click-sound.mp3'; // ← CHANGE THIS to your sound file name
+      // ===== SIMPLE RELIABLE SOUND SETUP =====
+      // Change this to your sound file name
+      const soundFile = 'click-sound.mp3';
       
-      // Load the audio
+      // Load the sound
       clickSound.src = soundFile;
       clickSound.load();
       clickSound.volume = 1.0;
       
-      // Function to unlock audio on iOS/iPad (required for WebAudio)
-      function unlockAudio() {
-        if (audioUnlocked) return;
-        
-        // Create a silent buffer to unlock WebAudio on iOS
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        if (AudioContext) {
-          const context = new AudioContext();
-          const buffer = context.createBuffer(1, 1, 22050);
-          const source = context.createBufferSource();
-          source.buffer = buffer;
-          source.connect(context.destination);
-          source.start(0);
-          context.close().then(() => {
-            console.log('Audio unlocked for iOS');
-          });
-        }
-        
-        // Also try playing and immediately pausing the audio element
-        const playPromise = clickSound.play();
-        if (playPromise !== undefined) {
-          playPromise.then(() => {
-            clickSound.pause();
-            clickSound.currentTime = 0;
-            audioUnlocked = true;
-            console.log('Audio unlocked successfully');
-          }).catch(() => {
-            console.log('Audio unlock pending user interaction');
-          });
-        }
-        
-        // Remove the unlock listeners once attempted
-        document.removeEventListener('touchstart', unlockAudio);
-        document.removeEventListener('touchend', unlockAudio);
-      }
-      
-      // Add iOS-specific touch listeners to unlock audio before button click
-      document.addEventListener('touchstart', unlockAudio, { once: true });
-      document.addEventListener('touchend', unlockAudio, { once: true });
-      
-      // Also try on page load for desktop browsers
-      window.addEventListener('load', () => {
-        // Pre-load the audio
-        clickSound.load();
-      });
-      
-      // Function to play sound with iOS workaround
+      // Function to play sound - simple and reliable
       function playClickSound() {
-        if (soundPlayed) return;
-        
-        // Reset audio to beginning
+        // Reset to beginning
         clickSound.currentTime = 0;
         
-        // Create a new promise for playing
+        // Play with promise handling (works on all modern browsers)
         const playPromise = clickSound.play();
         
         if (playPromise !== undefined) {
-          playPromise.then(() => {
-            soundPlayed = true;
-            console.log('Sound played successfully');
-          }).catch(error => {
-            console.warn('Sound play failed:', error);
-            // Try one more time with a new audio element as fallback
-            const fallbackAudio = new Audio(soundFile);
-            fallbackAudio.volume = 1.0;
-            fallbackAudio.play().catch(e => console.warn('Fallback also failed:', e));
+          playPromise.catch(error => {
+            console.log('Audio not ready yet:', error);
+            // Try one more time after a tiny delay
+            setTimeout(() => {
+              clickSound.play().catch(e => console.log('Still cannot play audio'));
+            }, 100);
           });
         }
       }
+
+      // Pre-load audio on any user interaction (required by browsers)
+      function preloadAudio() {
+        clickSound.load();
+        // Attempt to play and immediately pause to "activate" audio
+        clickSound.play().then(() => {
+          clickSound.pause();
+          clickSound.currentTime = 0;
+          console.log('Audio preloaded successfully');
+        }).catch(() => {
+          console.log('Audio will play on click');
+        });
+      }
+      
+      // Preload audio when user interacts with anything
+      document.addEventListener('click', preloadAudio, { once: true });
+      document.addEventListener('touchstart', preloadAudio, { once: true });
 
       // ===== LARGE WATER RIPPLE EFFECT =====
       function createWaterRipple() {
@@ -479,41 +444,34 @@
         
         // Calculate 2cm in pixels (approximately 75-80px)
         const twoCmInPixels = Math.min(85, Math.max(65, window.innerHeight * 0.09));
-        // Center of screen minus 2cm upward
         const centerX = window.innerWidth / 2;
         const centerY = (window.innerHeight / 2) - twoCmInPixels;
         
-        // Clear any existing ripples
         rippleContainer.innerHTML = '';
         
-        // Create primary ripple
         const ripple1 = document.createElement('div');
         ripple1.className = 'water-ripple primary animate';
         ripple1.style.left = centerX + 'px';
         ripple1.style.top = centerY + 'px';
         rippleContainer.appendChild(ripple1);
         
-        // Create secondary ripple
         const ripple2 = document.createElement('div');
         ripple2.className = 'water-ripple secondary animate';
         ripple2.style.left = centerX + 'px';
         ripple2.style.top = centerY + 'px';
         rippleContainer.appendChild(ripple2);
         
-        // Create tertiary ripple
         const ripple3 = document.createElement('div');
         ripple3.className = 'water-ripple tertiary animate';
         ripple3.style.left = centerX + 'px';
         ripple3.style.top = centerY + 'px';
         rippleContainer.appendChild(ripple3);
         
-        // Clean up ripples after animation completes
         setTimeout(() => {
           rippleContainer.innerHTML = '';
         }, 2000);
       }
 
-      // ensure rising logo is hidden at start
       risingLogo.style.opacity = '0';
       risingLogo.style.bottom = '-250px';
       risingLogo.classList.remove('logo-animate-sequence');
@@ -522,16 +480,14 @@
         if (animationInProgress) return;
         animationInProgress = true;
 
-        // Play the sound effect (now iOS compatible)
+        // Play sound
         playClickSound();
 
-        // disable button and remove pulse class
         enterBtn.disabled = true;
         enterBtn.classList.remove('pulse-button');
         enterBtn.style.animation = 'none';
         document.body.style.cursor = 'wait';
 
-        // Fade out ENTER button container + background watermark logo
         container.classList.add('fade-out');
         if (bgWatermark) bgWatermark.classList.add('fade-out');
 
@@ -539,40 +495,27 @@
           container.style.visibility = 'hidden';
           if (bgWatermark) bgWatermark.style.visibility = 'hidden';
           
-          // Prepare rising logo
           risingLogo.style.visibility = 'visible';
           risingLogo.style.opacity = '0';
           risingLogo.style.bottom = '-250px';
           risingLogo.style.transform = 'translateX(-50%)';
           
-          // force reflow
           void risingLogo.offsetHeight;
-          
-          // trigger the 3-step animation
           risingLogo.classList.add('logo-animate-sequence');
           
-          // Trigger water ripple effect when logo reaches center
           setTimeout(() => {
             createWaterRipple();
           }, 900);
           
-          // redirect after animation completes
-          const logoAnimationDuration = 2850;
           setTimeout(() => {
             window.location.href = targetURL;
-          }, 550 + logoAnimationDuration);
+          }, 550 + 2850);
           
         }, 520);
       }
 
-      // attach click event (works on both mouse and touch)
       if (enterBtn) {
         enterBtn.addEventListener('click', startSequence);
-        // Also add touchstart for better mobile response
-        enterBtn.addEventListener('touchstart', (e) => {
-          e.preventDefault();
-          startSequence();
-        }, { once: true });
       }
 
       window.addEventListener('load', function() {
