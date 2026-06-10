@@ -11,7 +11,7 @@
       box-sizing: border-box;
     }
 
-    /* ===== MAIN ORANGE GRADIENT BACKGROUND (same as main site) ===== */
+    /* ===== MAIN ORANGE GRADIENT BACKGROUND ===== */
     body {
       min-height: 100vh;
       background: linear-gradient(135deg, #FF8C42 0%, #FF6B35 50%, #F25E2C 100%);
@@ -117,7 +117,7 @@
       transition: opacity 0.55s cubic-bezier(0.2, 0.9, 0.4, 1.1);
     }
 
-    /* ===== PULSING ANIMATION FOR ENTER BUTTON (exactly from your main site) ===== */
+    /* ===== PULSING ANIMATION FOR ENTER BUTTON ===== */
     @keyframes pulse {
       0% {
         transform: scale(1);
@@ -142,7 +142,7 @@
       transform: scale(1.05);
     }
 
-    /* ENTER button styling (glass pill) */
+    /* ENTER button styling */
     .enter-btn {
       background: rgba(255, 255, 255, 0.12);
       backdrop-filter: blur(10px);
@@ -159,7 +159,6 @@
       font-family: inherit;
     }
 
-    /* hover effect in addition to pulse override */
     .enter-btn:hover {
       transform: scale(1.05);
       background: rgba(255, 255, 255, 0.2);
@@ -200,12 +199,12 @@
         transform: translateX(-50%) scale(0.94);
       }
       35% {
-        opacity: 0.7;
+        opacity: 0.4;
       }
       100% {
         bottom: 50%;
         transform: translate(-50%, 50%) scale(1);
-        opacity: 0.65;
+        opacity: 0.35;
       }
     }
 
@@ -214,10 +213,10 @@
         filter: drop-shadow(0 0 0px rgba(255,255,200,0));
       }
       50% {
-        filter: drop-shadow(0 0 12px rgba(255,220,150,0.5)) drop-shadow(0 0 4px rgba(255,140,66,0.4));
+        filter: drop-shadow(0 0 12px rgba(255,220,150,0.4)) drop-shadow(0 0 4px rgba(255,140,66,0.3));
       }
       100% {
-        filter: drop-shadow(0 0 2px rgba(255,255,210,0.2));
+        filter: drop-shadow(0 0 2px rgba(255,255,210,0.15));
       }
     }
 
@@ -225,7 +224,7 @@
       0% {
         bottom: 50%;
         transform: translate(-50%, 50%) scale(1);
-        opacity: 0.65;
+        opacity: 0.35;
       }
       100% {
         bottom: 140%;
@@ -255,11 +254,14 @@
   <!-- RISING LOGO -->
   <img src="logo.png" alt="Jesus Youth KMC" class="rising-logo" id="risingLogo">
 
-  <!-- ENTER BUTTON CONTAINER with pulse animation -->
+  <!-- ENTER BUTTON CONTAINER -->
   <div id="enterContainer" class="enter-container">
     <button id="enterBtn" class="enter-btn pulse-button">ENTER</button>
     <div class="launch-sub">Jesus Youth KMC · Medical College Campus Ministry</div>
   </div>
+
+  <!-- Audio element for sound effect (hidden) -->
+  <audio id="clickSound" preload="auto" style="display: none;"></audio>
 
   <script>
     (function() {
@@ -267,9 +269,51 @@
       const container = document.getElementById('enterContainer');
       const bgWatermark = document.getElementById('bgWatermark');
       const risingLogo = document.getElementById('risingLogo');
+      const clickSound = document.getElementById('clickSound');
       const targetURL = 'https://jesusyouthkmc.github.io/jykmc.github.io/';
 
       let animationInProgress = false;
+      let soundPlayed = false;
+
+      // ===== SOUND SETUP =====
+      // Set the sound file path - CHANGE THIS TO YOUR AUDIO FILE
+      // Place your sound file in the same folder as this HTML file
+      // Supported formats: .mp3, .wav, .ogg
+      const soundFile = 'click-sound.mp3'; // ← CHANGE THIS to your sound file name
+      
+      // Load the sound
+      clickSound.src = soundFile;
+      clickSound.load();
+      
+      // Function to play sound with error handling
+      function playClickSound() {
+        if (soundPlayed) return;
+        soundPlayed = true;
+        
+        // Reset audio to beginning in case it was played before
+        clickSound.currentTime = 0;
+        
+        // Play the sound
+        const playPromise = clickSound.play();
+        
+        if (playPromise !== undefined) {
+          playPromise.catch(error => {
+            console.warn('Sound play failed:', error);
+            // Silent fail - animation continues regardless
+          });
+        }
+      }
+
+      // Preload sound on first user interaction (required by browsers)
+      function preloadAndPlaySound() {
+        playClickSound();
+        // Remove this listener after first click
+        document.removeEventListener('click', preloadAndPlaySound);
+      }
+      
+      // Add a one-time listener to enable sound on first click anywhere
+      // This helps bypass browser autoplay restrictions
+      document.addEventListener('click', preloadAndPlaySound, { once: true });
 
       // ensure rising logo is hidden at start
       risingLogo.style.opacity = '0';
@@ -280,13 +324,16 @@
         if (animationInProgress) return;
         animationInProgress = true;
 
-        // disable button and remove pulse class to prevent further animation interference
+        // Play the sound effect
+        playClickSound();
+
+        // disable button and remove pulse class
         enterBtn.disabled = true;
         enterBtn.classList.remove('pulse-button');
         enterBtn.style.animation = 'none';
         document.body.style.cursor = 'wait';
 
-        // 1️⃣ Fade out ENTER button container + background watermark logo
+        // Fade out ENTER button container + background watermark logo
         container.classList.add('fade-out');
         if (bgWatermark) bgWatermark.classList.add('fade-out');
 
@@ -294,7 +341,7 @@
           container.style.visibility = 'hidden';
           if (bgWatermark) bgWatermark.style.visibility = 'hidden';
           
-          // 2️⃣ Prepare rising logo
+          // Prepare rising logo
           risingLogo.style.visibility = 'visible';
           risingLogo.style.opacity = '0';
           risingLogo.style.bottom = '-250px';
@@ -303,10 +350,10 @@
           // force reflow
           void risingLogo.offsetHeight;
           
-          // 3️⃣ trigger the 3-step animation
+          // trigger the 3-step animation
           risingLogo.classList.add('logo-animate-sequence');
           
-          // 4️⃣ redirect after animation completes
+          // redirect after animation completes
           const logoAnimationDuration = 2850;
           setTimeout(() => {
             window.location.href = targetURL;
