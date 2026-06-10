@@ -373,11 +373,11 @@
   <!-- ENTER BUTTON CONTAINER -->
   <div id="enterContainer" class="enter-container">
     <button id="enterBtn" class="enter-btn pulse-button">ENTER</button>
-    <div class="launch-sub">Jesus Youth KMC · Kottayam Medical College Campus Ministry</div>
+    <div class="launch-sub">Jesus Youth KMC · Medical College Campus Ministry</div>
   </div>
 
-  <!-- Audio element for sound effect (hidden) -->
-  <audio id="clickSound" preload="auto" style="display: none;"></audio>
+  <!-- Audio element for sound effect - iOS compatible -->
+  <audio id="clickSound" preload="auto" playsinline webkit-playsinline></audio>
 
   <script>
     (function() {
@@ -392,58 +392,105 @@
       let animationInProgress = false;
       let soundPlayed = false;
       let ripplesTriggered = false;
+      let audioUnlocked = false;
 
-      // ===== SOUND SETUP =====
-      const soundFile = 'click-sound.mp3'; // ← CHANGE THIS to your sound file name
+      // ===== SOUND SETUP - iOS COMPATIBLE =====
+      // Change this to your sound file name
+      const soundFile = 'click-sound.mp3';
       clickSound.src = soundFile;
       clickSound.load();
       
+      // iOS requires audio context to be unlocked by user interaction
+      function unlockAudio() {
+        if (audioUnlocked) return;
+        
+        // Create a temporary silent audio context to unlock iOS audio
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (AudioContext) {
+          const context = new AudioContext();
+          const gainNode = context.createGain();
+          gainNode.gain.value = 0;
+          const oscillator = context.createOscillator();
+          oscillator.connect(gainNode);
+          gainNode.connect(context.destination);
+          oscillator.start(0);
+          oscillator.stop(0.001);
+          context.resume().then(() => {
+            console.log('Audio context resumed for iOS');
+          }).catch(e => console.log('Audio resume error:', e));
+        }
+        
+        audioUnlocked = true;
+      }
+      
       function playClickSound() {
         if (soundPlayed) return;
+        
+        // Unlock audio on first attempt
+        unlockAudio();
+        
         soundPlayed = true;
+        
+        // Reset and play
         clickSound.currentTime = 0;
+        clickSound.volume = 1.0;
+        
         const playPromise = clickSound.play();
+        
         if (playPromise !== undefined) {
-          playPromise.catch(error => console.warn('Sound play failed:', error));
+          playPromise.then(() => {
+            console.log('Sound played successfully');
+          }).catch(error => {
+            console.warn('Sound play failed:', error);
+            // Retry with a different approach for iOS
+            setTimeout(() => {
+              clickSound.play().catch(e => console.log('Retry failed:', e));
+            }, 100);
+          });
         }
       }
 
-      function preloadAndPlaySound() {
-        playClickSound();
-        document.removeEventListener('click', preloadAndPlaySound);
+      // Unlock audio on any user interaction before button click
+      function preloadAndUnlockAudio() {
+        unlockAudio();
+        // Also try to load the audio silently
+        clickSound.load();
+        document.removeEventListener('touchstart', preloadAndUnlockAudio);
+        document.removeEventListener('click', preloadAndUnlockAudio);
       }
-      document.addEventListener('click', preloadAndPlaySound, { once: true });
+      
+      // Add multiple event listeners to ensure audio unlocks on iOS
+      document.addEventListener('touchstart', preloadAndUnlockAudio, { once: true });
+      document.addEventListener('click', preloadAndUnlockAudio, { once: true });
 
-      // ===== LARGE WATER RIPPLE EFFECT (starting point 2cm / ~75px higher) =====
+      // ===== LARGE WATER RIPPLE EFFECT =====
       function createWaterRipple() {
         if (ripplesTriggered) return;
         ripplesTriggered = true;
         
         // Calculate 2cm in pixels (approximately 75-80px)
-        // Using 75px as standard, but also responsive to screen size
         const twoCmInPixels = Math.min(85, Math.max(65, window.innerHeight * 0.09));
-        // Center of screen minus 2cm upward
         const centerX = window.innerWidth / 2;
         const centerY = (window.innerHeight / 2) - twoCmInPixels;
         
         // Clear any existing ripples
         rippleContainer.innerHTML = '';
         
-        // Create primary ripple (largest, most visible) - position 2cm higher
+        // Create primary ripple
         const ripple1 = document.createElement('div');
         ripple1.className = 'water-ripple primary animate';
         ripple1.style.left = centerX + 'px';
         ripple1.style.top = centerY + 'px';
         rippleContainer.appendChild(ripple1);
         
-        // Create secondary ripple (medium, delayed)
+        // Create secondary ripple
         const ripple2 = document.createElement('div');
         ripple2.className = 'water-ripple secondary animate';
         ripple2.style.left = centerX + 'px';
         ripple2.style.top = centerY + 'px';
         rippleContainer.appendChild(ripple2);
         
-        // Create tertiary ripple (subtle, longer delay)
+        // Create tertiary ripple
         const ripple3 = document.createElement('div');
         ripple3.className = 'water-ripple tertiary animate';
         ripple3.style.left = centerX + 'px';
@@ -465,7 +512,7 @@
         if (animationInProgress) return;
         animationInProgress = true;
 
-        // Play the sound effect
+        // Play the sound effect (iOS compatible)
         playClickSound();
 
         // disable button and remove pulse class
@@ -494,7 +541,7 @@
           // trigger the 3-step animation
           risingLogo.classList.add('logo-animate-sequence');
           
-          // Trigger large water ripple effect when logo reaches center (at ~0.9s)
+          // Trigger large water ripple effect when logo reaches center
           setTimeout(() => {
             createWaterRipple();
           }, 900);
@@ -511,6 +558,12 @@
       // attach click event
       if (enterBtn) {
         enterBtn.addEventListener('click', startSequence);
+        // Also add touchstart for iOS responsiveness
+        enterBtn.addEventListener('touchstart', function(e) {
+          // Prevent double-firing on some devices
+          e.preventDefault();
+          startSequence();
+        });
       }
 
       window.addEventListener('load', function() {
