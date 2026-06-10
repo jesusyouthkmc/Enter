@@ -68,8 +68,6 @@
 
     .water-ripple {
       position: absolute;
-      top: 50%;
-      left: 50%;
       width: 0;
       height: 0;
       border-radius: 50%;
@@ -375,7 +373,7 @@
   <!-- ENTER BUTTON CONTAINER -->
   <div id="enterContainer" class="enter-container">
     <button id="enterBtn" class="enter-btn pulse-button">ENTER</button>
-    <div class="launch-sub">Jesus Youth KMC · Kottayam Medical College Campus Ministry</div>
+    <div class="launch-sub">Jesus Youth KMC · Medical College Campus Ministry</div>
   </div>
 
   <!-- Audio element for sound effect (hidden) -->
@@ -416,27 +414,40 @@
       }
       document.addEventListener('click', preloadAndPlaySound, { once: true });
 
-      // ===== LARGE WATER RIPPLE EFFECT =====
+      // ===== LARGE WATER RIPPLE EFFECT (starting point 2cm / ~75px higher) =====
       function createWaterRipple() {
         if (ripplesTriggered) return;
         ripplesTriggered = true;
         
+        // Calculate 2cm in pixels (approximately 75-80px)
+        // Using 75px as standard, but also responsive to screen size
+        const twoCmInPixels = Math.min(85, Math.max(65, window.innerHeight * 0.09));
+        // Center of screen minus 2cm upward
+        const centerX = window.innerWidth / 2;
+        const centerY = (window.innerHeight / 2) - twoCmInPixels;
+        
         // Clear any existing ripples
         rippleContainer.innerHTML = '';
         
-        // Create primary ripple (largest, most visible)
+        // Create primary ripple (largest, most visible) - position 2cm higher
         const ripple1 = document.createElement('div');
         ripple1.className = 'water-ripple primary animate';
+        ripple1.style.left = centerX + 'px';
+        ripple1.style.top = centerY + 'px';
         rippleContainer.appendChild(ripple1);
         
         // Create secondary ripple (medium, delayed)
         const ripple2 = document.createElement('div');
         ripple2.className = 'water-ripple secondary animate';
+        ripple2.style.left = centerX + 'px';
+        ripple2.style.top = centerY + 'px';
         rippleContainer.appendChild(ripple2);
         
         // Create tertiary ripple (subtle, longer delay)
         const ripple3 = document.createElement('div');
         ripple3.className = 'water-ripple tertiary animate';
+        ripple3.style.left = centerX + 'px';
+        ripple3.style.top = centerY + 'px';
         rippleContainer.appendChild(ripple3);
         
         // Clean up ripples after animation completes
