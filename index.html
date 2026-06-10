@@ -170,14 +170,21 @@
       margin-top: 1.8rem;
       font-size: 0.8rem;
       color: rgba(255,255,255,0.65);
-      letter-spacing: 2px;
-      text-transform: uppercase;
+      letter-spacing: 1.5px;
       font-weight: 400;
+      white-space: nowrap;
     }
 
     @media (max-width: 550px) {
       .enter-btn { font-size: 1.2rem; padding: 0.8rem 2rem; letter-spacing: 3px; }
-      .launch-sub { font-size: 0.65rem; }
+      .launch-sub { 
+        font-size: 0.6rem; 
+        letter-spacing: 1px;
+        white-space: normal;
+        max-width: 90%;
+        margin-left: auto;
+        margin-right: auto;
+      }
     }
 
     /* fade-out class for button container + watermark */
@@ -257,7 +264,7 @@
   <!-- ENTER BUTTON CONTAINER -->
   <div id="enterContainer" class="enter-container">
     <button id="enterBtn" class="enter-btn pulse-button">ENTER</button>
-    <div class="launch-sub">Jesus Youth KMC · Medical College Campus Ministry</div>
+    <div class="launch-sub">Jesus Youth KMC · Kottayam Medical College Campus Ministry</div>
   </div>
 
   <!-- Audio element for sound effect (hidden) -->
