@@ -54,6 +54,125 @@
       z-index: 2;
     }
 
+    /* ===== LARGE WATER DROPLET RIPPLE EFFECT ===== */
+    .ripple-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 12;
+      overflow: hidden;
+    }
+
+    .water-ripple {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* Primary ripple - largest and most visible */
+    .water-ripple.primary {
+      background: radial-gradient(circle, 
+        rgba(255, 255, 255, 0.5) 0%, 
+        rgba(255, 200, 100, 0.3) 30%, 
+        rgba(255, 140, 66, 0.15) 60%, 
+        transparent 80%);
+      box-shadow: 0 0 20px rgba(255, 200, 100, 0.3);
+    }
+
+    .water-ripple.primary.animate {
+      animation: largeRippleExpand 1.5s ease-out forwards;
+    }
+
+    /* Secondary ripple - slightly delayed */
+    .water-ripple.secondary {
+      background: radial-gradient(circle, 
+        rgba(255, 255, 255, 0.35) 0%, 
+        rgba(255, 200, 100, 0.2) 40%, 
+        rgba(255, 140, 66, 0.1) 70%, 
+        transparent 90%);
+    }
+
+    .water-ripple.secondary.animate {
+      animation: largeRippleExpand 1.5s ease-out 0.25s forwards;
+    }
+
+    /* Tertiary ripple - longest delay, most subtle */
+    .water-ripple.tertiary {
+      background: radial-gradient(circle, 
+        rgba(255, 255, 255, 0.25) 0%, 
+        rgba(255, 200, 100, 0.15) 50%, 
+        rgba(255, 140, 66, 0.08) 80%, 
+        transparent 100%);
+    }
+
+    .water-ripple.tertiary.animate {
+      animation: largeRippleExpand 1.5s ease-out 0.55s forwards;
+    }
+
+    @keyframes largeRippleExpand {
+      0% {
+        width: 0;
+        height: 0;
+        opacity: 0.8;
+      }
+      15% {
+        opacity: 0.9;
+      }
+      40% {
+        width: 400px;
+        height: 400px;
+        opacity: 0.6;
+      }
+      70% {
+        width: 800px;
+        height: 800px;
+        opacity: 0.35;
+      }
+      100% {
+        width: 1500px;
+        height: 1500px;
+        opacity: 0;
+      }
+    }
+
+    /* Extra large screens need even bigger ripples */
+    @media (min-width: 1200px) {
+      @keyframes largeRippleExpand {
+        0% {
+          width: 0;
+          height: 0;
+          opacity: 0.8;
+        }
+        15% {
+          opacity: 0.9;
+        }
+        40% {
+          width: 600px;
+          height: 600px;
+          opacity: 0.6;
+        }
+        70% {
+          width: 1200px;
+          height: 1200px;
+          opacity: 0.35;
+        }
+        100% {
+          width: 2200px;
+          height: 2200px;
+          opacity: 0;
+        }
+      }
+    }
+
     /* ===== BACKGROUND WATERMARK LOGO ===== */
     .bg-watermark {
       position: fixed;
@@ -187,10 +306,6 @@
       pointer-events: none;
     }
 
-    .hidden-visually {
-      visibility: hidden;
-    }
-
     /* ----- ANIMATION SEQUENCE FOR RISING LOGO ----- */
     @keyframes riseToCenter {
       0% {
@@ -248,6 +363,9 @@
   <div class="animated-gradient"></div>
   <div class="vignette"></div>
 
+  <!-- Ripple Container for water droplet effect -->
+  <div class="ripple-container" id="rippleContainer"></div>
+
   <!-- BACKGROUND WATERMARK LOGO -->
   <img src="logo.png" alt="background watermark" class="bg-watermark" id="bgWatermark">
 
@@ -269,51 +387,63 @@
       const container = document.getElementById('enterContainer');
       const bgWatermark = document.getElementById('bgWatermark');
       const risingLogo = document.getElementById('risingLogo');
+      const rippleContainer = document.getElementById('rippleContainer');
       const clickSound = document.getElementById('clickSound');
       const targetURL = 'https://jesusyouthkmc.github.io/jykmc.github.io/';
 
       let animationInProgress = false;
       let soundPlayed = false;
+      let ripplesTriggered = false;
 
       // ===== SOUND SETUP =====
-      // Set the sound file path - CHANGE THIS TO YOUR AUDIO FILE
-      // Place your sound file in the same folder as this HTML file
-      // Supported formats: .mp3, .wav, .ogg
       const soundFile = 'click-sound.mp3'; // ← CHANGE THIS to your sound file name
-      
-      // Load the sound
       clickSound.src = soundFile;
       clickSound.load();
       
-      // Function to play sound with error handling
       function playClickSound() {
         if (soundPlayed) return;
         soundPlayed = true;
-        
-        // Reset audio to beginning in case it was played before
         clickSound.currentTime = 0;
-        
-        // Play the sound
         const playPromise = clickSound.play();
-        
         if (playPromise !== undefined) {
-          playPromise.catch(error => {
-            console.warn('Sound play failed:', error);
-            // Silent fail - animation continues regardless
-          });
+          playPromise.catch(error => console.warn('Sound play failed:', error));
         }
       }
 
-      // Preload sound on first user interaction (required by browsers)
       function preloadAndPlaySound() {
         playClickSound();
-        // Remove this listener after first click
         document.removeEventListener('click', preloadAndPlaySound);
       }
-      
-      // Add a one-time listener to enable sound on first click anywhere
-      // This helps bypass browser autoplay restrictions
       document.addEventListener('click', preloadAndPlaySound, { once: true });
+
+      // ===== LARGE WATER RIPPLE EFFECT =====
+      function createWaterRipple() {
+        if (ripplesTriggered) return;
+        ripplesTriggered = true;
+        
+        // Clear any existing ripples
+        rippleContainer.innerHTML = '';
+        
+        // Create primary ripple (largest, most visible)
+        const ripple1 = document.createElement('div');
+        ripple1.className = 'water-ripple primary animate';
+        rippleContainer.appendChild(ripple1);
+        
+        // Create secondary ripple (medium, delayed)
+        const ripple2 = document.createElement('div');
+        ripple2.className = 'water-ripple secondary animate';
+        rippleContainer.appendChild(ripple2);
+        
+        // Create tertiary ripple (subtle, longer delay)
+        const ripple3 = document.createElement('div');
+        ripple3.className = 'water-ripple tertiary animate';
+        rippleContainer.appendChild(ripple3);
+        
+        // Clean up ripples after animation completes
+        setTimeout(() => {
+          rippleContainer.innerHTML = '';
+        }, 2000);
+      }
 
       // ensure rising logo is hidden at start
       risingLogo.style.opacity = '0';
@@ -352,6 +482,11 @@
           
           // trigger the 3-step animation
           risingLogo.classList.add('logo-animate-sequence');
+          
+          // Trigger large water ripple effect when logo reaches center (at ~0.9s)
+          setTimeout(() => {
+            createWaterRipple();
+          }, 900);
           
           // redirect after animation completes
           const logoAnimationDuration = 2850;
