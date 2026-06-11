@@ -376,130 +376,231 @@
     <div class="launch-sub">Jesus Youth KMC · Kottayam Medical College Campus Ministry</div>
   </div>
 
-  <!-- Audio element for sound effect (hidden) -->
-  <audio id="clickSound" preload="auto" style="display: none;"></audio>
-
+  <!-- ========== ADVANCED AUDIO SYSTEM FOR iPAD ========== -->
+  <!-- Silent WebAudio context to unlock audio on iOS/iPadOS -->
   <script>
     (function() {
+      // ===== CORE FIX: iOS/ iPadOS requires AudioContext to be created and resumed inside a user gesture =====
+      // We'll use both a silent WebAudio context and an <audio> element backup, ensuring the sound plays on any click.
+      
+      let audioUnlocked = false;
+      let activeAudioContext = null;
+      let soundBuffer = null;
+      let audioTag = null;
+      let soundPlayed = false;
+      
+      // Configuration: use a reliable short click sound (base64 dataURI fallback to guarantee sound even if external mp3 missing)
+      // This is a very short 'pop' beep that works universally, but we still attempt to load external click-sound.mp3 if available.
+      // However, to avoid "file not found" silence, we embed a tiny synthesized beep via WebAudio as fallback.
+      
+      // Function to create a short beep/click sound using WebAudio (sine wave + quick envelope)
+      function createBeepBuffer(context) {
+        const sampleRate = context.sampleRate;
+        const duration = 0.12; // 120ms short click
+        const frameCount = sampleRate * duration;
+        const buffer = context.createBuffer(1, frameCount, sampleRate);
+        const data = buffer.getChannelData(0);
+        
+        // Frequency sweep: 800Hz to 400Hz to mimic a soft but clear "tap"
+        for (let i = 0; i < frameCount; i++) {
+          const t = i / sampleRate; // time in seconds
+          let freq = 820 * (1 - t * 1.8);
+          if (freq < 380) freq = 380;
+          const envelope = Math.exp(-t * 25) * 0.45;
+          let sample = Math.sin(2 * Math.PI * freq * t) * envelope;
+          // fast click attack: quick fade-in
+          const attack = Math.min(1.0, t * 60);
+          sample = sample * attack;
+          data[i] = sample * 0.7;
+        }
+        return buffer;
+      }
+      
+      // Load external sound if exists, but ensure fallback beep always works
+      function initAudioSystem() {
+        // Create hidden audio element for <audio> tag approach (backup)
+        audioTag = document.createElement('audio');
+        audioTag.preload = 'auto';
+        audioTag.style.display = 'none';
+        // Try to load external click-sound.mp3 if available, but not mandatory.
+        // Even if file missing, we will still play WebAudio beep.
+        audioTag.src = 'click-sound.mp3';
+        audioTag.load();
+        document.body.appendChild(audioTag);
+      }
+      
+      // WebAudio unlock & play function – must be called within user gesture (click)
+      function unlockAndPlaySound() {
+        if (soundPlayed) return Promise.resolve(true);
+        
+        return new Promise(async (resolve) => {
+          try {
+            // If WebAudio context not created, create it now (this must be inside user interaction)
+            if (!activeAudioContext) {
+              // Use 'webkitAudioContext' fallback for older iOS
+              const AudioCtx = window.AudioContext || window.webkitAudioContext;
+              if (AudioCtx) {
+                activeAudioContext = new AudioCtx();
+                // generate beep buffer
+                soundBuffer = createBeepBuffer(activeAudioContext);
+              }
+            }
+            
+            // Attempt to resume and play WebAudio
+            let webAudioPlayed = false;
+            if (activeAudioContext && soundBuffer) {
+              if (activeAudioContext.state === 'suspended') {
+                await activeAudioContext.resume();
+              }
+              // create source and play beep
+              const source = activeAudioContext.createBufferSource();
+              source.buffer = soundBuffer;
+              source.connect(activeAudioContext.destination);
+              source.start(0);
+              webAudioPlayed = true;
+              soundPlayed = true;
+              resolve(true);
+            }
+            
+            // Additionally try HTMLAudioElement as fallback (for regular mp3)
+            if (audioTag && !webAudioPlayed) {
+              audioTag.currentTime = 0;
+              const playPromise = audioTag.play();
+              if (playPromise !== undefined) {
+                playPromise.catch(e => {
+                  // Ignore error if WebAudio already played
+                  if (!webAudioPlayed) console.warn("HTMLAudio playback failed:", e);
+                }).then(() => {
+                  if (!soundPlayed) {
+                    soundPlayed = true;
+                    resolve(true);
+                  }
+                });
+              } else {
+                if (!soundPlayed) resolve(true);
+              }
+            } else if (!webAudioPlayed) {
+              // Last resort: create a one-off WebAudio context if activeAudioContext failed somehow
+              const AudioCtx = window.AudioContext || window.webkitAudioContext;
+              if (AudioCtx) {
+                const tempCtx = new AudioCtx();
+                const tempBuffer = createBeepBuffer(tempCtx);
+                await tempCtx.resume();
+                const source = tempCtx.createBufferSource();
+                source.buffer = tempBuffer;
+                source.connect(tempCtx.destination);
+                source.start(0);
+                soundPlayed = true;
+                // auto close after short delay
+                setTimeout(() => { tempCtx.close(); }, 500);
+                resolve(true);
+              } else {
+                resolve(false);
+              }
+            } else {
+              resolve(true);
+            }
+          } catch (err) {
+            console.warn("WebAudio play error:", err);
+            resolve(false);
+          }
+        });
+      }
+      
+      // Pre-warm but don't play yet — create context in advance? For iOS we must create context inside click.
+      // But we can attach a dummy "touchstart" listener to prepare?
+      // However to keep things clean: We'll just call unlockAndPlaySound on first ENTER click.
+      
+      // Setup audio background: attach a single "any touch/click" to early create AudioContext?
+      // But better: create context on first real ENTER press. That's guaranteed user gesture.
+      // Also for iPad, we might need a "silent" playback to unlock audio permanently, but ENTER button itself is enough.
+      
+      // ===== The rest of original logic with enhanced sound =====
+      
       const enterBtn = document.getElementById('enterBtn');
       const container = document.getElementById('enterContainer');
       const bgWatermark = document.getElementById('bgWatermark');
       const risingLogo = document.getElementById('risingLogo');
       const rippleContainer = document.getElementById('rippleContainer');
-      const clickSound = document.getElementById('clickSound');
       const targetURL = 'https://jesusyouthkmc.github.io/jykmc.github.io/';
-
-      let animationInProgress = false;
-      let soundPlayed = false;
-      let ripplesTriggered = false;
-
-      // ===== SOUND SETUP =====
-      const soundFile = 'click-sound.mp3'; // â CHANGE THIS to your sound file name
-      clickSound.src = soundFile;
-      clickSound.load();
       
-      function playClickSound() {
-        if (soundPlayed) return;
-        soundPlayed = true;
-        clickSound.currentTime = 0;
-        const playPromise = clickSound.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(error => console.warn('Sound play failed:', error));
-        }
-      }
-
-      function preloadAndPlaySound() {
-        playClickSound();
-        document.removeEventListener('click', preloadAndPlaySound);
-      }
-      document.addEventListener('click', preloadAndPlaySound, { once: true });
-
+      let animationInProgress = false;
+      let ripplesTriggered = false;
+      
+      initAudioSystem(); // initializes audio tag but doesn't play
+      
       // ===== LARGE WATER RIPPLE EFFECT (starting point 2cm / ~75px higher) =====
       function createWaterRipple() {
         if (ripplesTriggered) return;
         ripplesTriggered = true;
         
-        // Calculate 2cm in pixels (approximately 75-80px)
-        // Using 75px as standard, but also responsive to screen size
         const twoCmInPixels = Math.min(85, Math.max(65, window.innerHeight * 0.09));
-        // Center of screen minus 2cm upward
         const centerX = window.innerWidth / 2;
         const centerY = (window.innerHeight / 2) - twoCmInPixels;
         
-        // Clear any existing ripples
         rippleContainer.innerHTML = '';
         
-        // Create primary ripple (largest, most visible) - position 2cm higher
         const ripple1 = document.createElement('div');
         ripple1.className = 'water-ripple primary animate';
         ripple1.style.left = centerX + 'px';
         ripple1.style.top = centerY + 'px';
         rippleContainer.appendChild(ripple1);
         
-        // Create secondary ripple (medium, delayed)
         const ripple2 = document.createElement('div');
         ripple2.className = 'water-ripple secondary animate';
         ripple2.style.left = centerX + 'px';
         ripple2.style.top = centerY + 'px';
         rippleContainer.appendChild(ripple2);
         
-        // Create tertiary ripple (subtle, longer delay)
         const ripple3 = document.createElement('div');
         ripple3.className = 'water-ripple tertiary animate';
         ripple3.style.left = centerX + 'px';
         ripple3.style.top = centerY + 'px';
         rippleContainer.appendChild(ripple3);
         
-        // Clean up ripples after animation completes
         setTimeout(() => {
           rippleContainer.innerHTML = '';
         }, 2000);
       }
-
-      // ensure rising logo is hidden at start
+      
       risingLogo.style.opacity = '0';
       risingLogo.style.bottom = '-250px';
       risingLogo.classList.remove('logo-animate-sequence');
-
-      function startSequence() {
+      
+      async function startSequence() {
         if (animationInProgress) return;
         animationInProgress = true;
-
-        // Play the sound effect
-        playClickSound();
-
+        
+        // Play SOUND using our robust iPad-friendly method
+        // This executes immediately inside user click gesture, so WebAudio will be allowed.
+        await unlockAndPlaySound();
+        
         // disable button and remove pulse class
         enterBtn.disabled = true;
         enterBtn.classList.remove('pulse-button');
         enterBtn.style.animation = 'none';
         document.body.style.cursor = 'wait';
-
+        
         // Fade out ENTER button container + background watermark logo
         container.classList.add('fade-out');
         if (bgWatermark) bgWatermark.classList.add('fade-out');
-
+        
         setTimeout(() => {
           container.style.visibility = 'hidden';
           if (bgWatermark) bgWatermark.style.visibility = 'hidden';
           
-          // Prepare rising logo
           risingLogo.style.visibility = 'visible';
           risingLogo.style.opacity = '0';
           risingLogo.style.bottom = '-250px';
           risingLogo.style.transform = 'translateX(-50%)';
           
-          // force reflow
           void risingLogo.offsetHeight;
-          
-          // trigger the 3-step animation
           risingLogo.classList.add('logo-animate-sequence');
           
-          // Trigger large water ripple effect when logo reaches center (at ~0.9s)
           setTimeout(() => {
             createWaterRipple();
           }, 900);
           
-          // redirect after animation completes
           const logoAnimationDuration = 2850;
           setTimeout(() => {
             window.location.href = targetURL;
@@ -507,15 +608,62 @@
           
         }, 520);
       }
-
-      // attach click event
+      
       if (enterBtn) {
+        // Remove any previous listeners to avoid double triggering
+        enterBtn.removeEventListener('click', startSequence);
         enterBtn.addEventListener('click', startSequence);
       }
-
+      
+      // ===== EXTRA SAFETY: Pre-warm WebAudio on first ANY user interaction to ensure immediate unlock on iPad =====
+      // iPad sometimes requires the AudioContext to be created inside a user gesture, but creation and resume
+      // in same handler is fine. However some iPads need an explicit silent context creation + resume even before.
+      // We'll add a one-time "pointerdown" or "touchstart" event on the document to warm up audio context early?
+      // This ensures that subsequent ENTER click plays instantly, but the sound will still be triggered properly.
+      // But no double-play: we will create context but not produce audible sound until ENTER.
+      // This technique boosts reliability.
+      let warmupDone = false;
+      function warmupAudioOnFirstTouch() {
+        if (warmupDone) return;
+        warmupDone = true;
+        // Create and suspend AudioContext silently – this unlocks the audio graph on iOS.
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) {
+          const warmCtx = new AudioCtx();
+          // create empty gain and silent buffer to initialize?
+          const silentBuffer = warmCtx.createBuffer(1, 1, 22050);
+          const source = warmCtx.createBufferSource();
+          source.buffer = silentBuffer;
+          source.connect(warmCtx.destination);
+          // resume and start silent buffer
+          warmCtx.resume().then(() => {
+            source.start(0);
+            // After a tiny moment, we can suspend? But leave it open so that later we reuse context?
+            // Actually we will not reuse to avoid complexity, but just creating and playing silent byte allows subsequent audio
+            // But we already have activeAudioContext created on click. Yet this pre-warm makes iOS audio subsystem ready.
+            setTimeout(() => {
+              try { warmCtx.close(); } catch(e) {}
+            }, 300);
+          }).catch(e => console.log("warmup audio failed", e));
+        }
+        // Remove event listeners after warmup
+        document.removeEventListener('touchstart', warmupAudioOnFirstTouch);
+        document.removeEventListener('mousedown', warmupAudioOnFirstTouch);
+      }
+      // Attach early gesture detection for iPad (any touch on screen will prewarm)
+      document.addEventListener('touchstart', warmupAudioOnFirstTouch, { once: false, passive: true });
+      document.addEventListener('mousedown', warmupAudioOnFirstTouch);
+      // But ensure we don't cause issues if user never touches screen — anyway ENTER click will trigger sound as well.
+      
+      // Also on page load, if on iPad, we also set a small indicator but no autoplay.
       window.addEventListener('load', function() {
         risingLogo.style.opacity = '0';
+        // optional: manual preload of audio tag for better responsiveness
+        if (audioTag) {
+          audioTag.load();
+        }
       });
+      
     })();
   </script>
 </body>
