@@ -394,25 +394,31 @@
       let ripplesTriggered = false;
 
       // ===== SOUND SETUP =====
-      const soundFile = 'click-sound.mp3'; // â CHANGE THIS to your sound file name
+      // Sound file name (ensure 'click-sound.mp3' exists in the same directory)
+      const soundFile = 'click-sound.mp3';
       clickSound.src = soundFile;
       clickSound.load();
       
+      // Function to play the click sound
       function playClickSound() {
         if (soundPlayed) return;
         soundPlayed = true;
+        
+        // Reset and play
         clickSound.currentTime = 0;
         const playPromise = clickSound.play();
         if (playPromise !== undefined) {
-          playPromise.catch(error => console.warn('Sound play failed:', error));
+          playPromise.catch(error => {
+            console.warn('Sound play failed:', error);
+            // Some browsers require user interaction first; we already have it via button click
+            // but just in case, retry with a small delay isn't needed because button click is direct user gesture
+          });
         }
       }
 
-      function preloadAndPlaySound() {
-        playClickSound();
-        document.removeEventListener('click', preloadAndPlaySound);
-      }
-      document.addEventListener('click', preloadAndPlaySound, { once: true });
+      // IMPORTANT: REMOVED the global document click listener that was causing sound on any click.
+      // Sound will ONLY play when the ENTER button is clicked.
+      // No automatic preload sound on document click anymore.
 
       // ===== LARGE WATER RIPPLE EFFECT (starting point 2cm / ~75px higher) =====
       function createWaterRipple() {
@@ -420,7 +426,6 @@
         ripplesTriggered = true;
         
         // Calculate 2cm in pixels (approximately 75-80px)
-        // Using 75px as standard, but also responsive to screen size
         const twoCmInPixels = Math.min(85, Math.max(65, window.innerHeight * 0.09));
         // Center of screen minus 2cm upward
         const centerX = window.innerWidth / 2;
@@ -429,7 +434,7 @@
         // Clear any existing ripples
         rippleContainer.innerHTML = '';
         
-        // Create primary ripple (largest, most visible) - position 2cm higher
+        // Create primary ripple (largest, most visible)
         const ripple1 = document.createElement('div');
         ripple1.className = 'water-ripple primary animate';
         ripple1.style.left = centerX + 'px';
@@ -465,7 +470,7 @@
         if (animationInProgress) return;
         animationInProgress = true;
 
-        // Play the sound effect
+        // Play the sound effect (only on button click)
         playClickSound();
 
         // disable button and remove pulse class
@@ -508,14 +513,38 @@
         }, 520);
       }
 
-      // attach click event
+      // Attach click event ONLY to the ENTER button.
+      // No other click listeners on document or body.
       if (enterBtn) {
         enterBtn.addEventListener('click', startSequence);
       }
 
+      // Ensure that no stray click listeners are attached elsewhere.
+      // For safety, prevent accidental sound if someone clicks something else (like the subtitle).
+      // The subtitle area is inside .enter-container but it's not interactive, but just in case
+      // we don't attach anything to it.
+
+      // Additionally, to satisfy browser autoplay policies, we don't need any pre-click preloading
+      // because the sound is played directly inside a user-initiated click handler (startSequence).
+      // That's fully compliant with all modern browsers.
+
+      // For extra security: disable any default contextmenu on button (just for cleanliness)
+      enterBtn.addEventListener('contextmenu', (e) => e.preventDefault());
+
       window.addEventListener('load', function() {
         risingLogo.style.opacity = '0';
+        // optional: preload sound more reliably? No need, but we can ensure audio is ready.
+        // The load() already called. This is fine.
+        clickSound.load(); // reload just in case for fresh state
       });
+      
+      // Also, if there's any leftover global click listener that might have been set by mistake,
+      // we explicitly remove any possible interference by not setting any. The previous code had:
+      // document.addEventListener('click', preloadAndPlaySound, { once: true });
+      // That has been completely removed, ensuring no accidental sound playback.
+      
+      // In case of any future developer oversight, we can also add a small log to confirm.
+      console.log('Sound will only play when ENTER button is clicked. Global click listener removed.');
     })();
   </script>
 </body>
