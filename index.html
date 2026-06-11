@@ -11,6 +11,7 @@
       box-sizing: border-box;
     }
 
+    /* ===== MAIN ORANGE GRADIENT BACKGROUND ===== */
     body {
       min-height: 100vh;
       background: linear-gradient(135deg, #FF8C42 0%, #FF6B35 50%, #F25E2C 100%);
@@ -22,6 +23,7 @@
       overflow: hidden;
     }
 
+    /* subtle animated overlay for depth */
     .animated-gradient {
       position: fixed;
       top: 0;
@@ -34,13 +36,13 @@
       pointer-events: none;
       z-index: 1;
     }
-    
     @keyframes shiftGradient {
       0% { background-position: 0% 50%; }
       50% { background-position: 100% 50%; }
       100% { background-position: 0% 50%; }
     }
 
+    /* light vignette for depth */
     .vignette {
       position: fixed;
       top: 0;
@@ -52,6 +54,7 @@
       z-index: 2;
     }
 
+    /* ===== LARGE WATER DROPLET RIPPLE EFFECT ===== */
     .ripple-container {
       position: fixed;
       top: 0;
@@ -73,6 +76,7 @@
       pointer-events: none;
     }
 
+    /* Primary ripple - largest and most visible */
     .water-ripple.primary {
       background: radial-gradient(circle, 
         rgba(255, 255, 255, 0.5) 0%, 
@@ -86,6 +90,7 @@
       animation: largeRippleExpand 1.5s ease-out forwards;
     }
 
+    /* Secondary ripple - slightly delayed */
     .water-ripple.secondary {
       background: radial-gradient(circle, 
         rgba(255, 255, 255, 0.35) 0%, 
@@ -98,6 +103,7 @@
       animation: largeRippleExpand 1.5s ease-out 0.25s forwards;
     }
 
+    /* Tertiary ripple - longest delay, most subtle */
     .water-ripple.tertiary {
       background: radial-gradient(circle, 
         rgba(255, 255, 255, 0.25) 0%, 
@@ -136,6 +142,7 @@
       }
     }
 
+    /* Extra large screens need even bigger ripples */
     @media (min-width: 1200px) {
       @keyframes largeRippleExpand {
         0% {
@@ -164,6 +171,7 @@
       }
     }
 
+    /* ===== BACKGROUND WATERMARK LOGO ===== */
     .bg-watermark {
       position: fixed;
       pointer-events: none;
@@ -194,6 +202,7 @@
       }
     }
 
+    /* ===== RISING LOGO ===== */
     .rising-logo {
       position: fixed;
       pointer-events: none;
@@ -216,6 +225,7 @@
       .rising-logo { width: 28%; max-width: 360px; }
     }
 
+    /* ===== ENTER BUTTON CONTAINER ===== */
     .enter-container {
       position: relative;
       z-index: 20;
@@ -224,6 +234,7 @@
       transition: opacity 0.55s cubic-bezier(0.2, 0.9, 0.4, 1.1);
     }
 
+    /* ===== PULSING ANIMATION FOR ENTER BUTTON ===== */
     @keyframes pulse {
       0% {
         transform: scale(1);
@@ -248,6 +259,7 @@
       transform: scale(1.05);
     }
 
+    /* ENTER button styling */
     .enter-btn {
       background: rgba(255, 255, 255, 0.12);
       backdrop-filter: blur(10px);
@@ -285,12 +297,14 @@
       .launch-sub { font-size: 0.65rem; }
     }
 
+    /* fade-out class for button container + watermark */
     .fade-out {
       opacity: 0 !important;
       transition: opacity 0.55s cubic-bezier(0.2, 0.9, 0.4, 1.1) !important;
       pointer-events: none;
     }
 
+    /* ----- ANIMATION SEQUENCE FOR RISING LOGO ----- */
     @keyframes riseToCenter {
       0% {
         bottom: -250px;
@@ -343,17 +357,27 @@
 </head>
 <body>
 
+  <!-- background depth layers -->
   <div class="animated-gradient"></div>
   <div class="vignette"></div>
+
+  <!-- Ripple Container for water droplet effect -->
   <div class="ripple-container" id="rippleContainer"></div>
 
+  <!-- BACKGROUND WATERMARK LOGO -->
   <img src="logo.png" alt="background watermark" class="bg-watermark" id="bgWatermark">
+
+  <!-- RISING LOGO -->
   <img src="logo.png" alt="Jesus Youth KMC" class="rising-logo" id="risingLogo">
 
+  <!-- ENTER BUTTON CONTAINER -->
   <div id="enterContainer" class="enter-container">
     <button id="enterBtn" class="enter-btn pulse-button">ENTER</button>
     <div class="launch-sub">Jesus Youth KMC · Kottayam Medical College Campus Ministry</div>
   </div>
+
+  <!-- Audio element for sound effect (hidden) -->
+  <audio id="clickSound" preload="auto" style="display: none;"></audio>
 
   <script>
     (function() {
@@ -362,112 +386,136 @@
       const bgWatermark = document.getElementById('bgWatermark');
       const risingLogo = document.getElementById('risingLogo');
       const rippleContainer = document.getElementById('rippleContainer');
+      const clickSound = document.getElementById('clickSound');
       const targetURL = 'https://jesusyouthkmc.github.io/jykmc.github.io/';
-      
+
       let animationInProgress = false;
+      let soundPlayed = false;
       let ripplesTriggered = false;
+
+      // ===== SOUND SETUP =====
+      const soundFile = 'click-sound.mp3'; // â CHANGE THIS to your sound file name
+      clickSound.src = soundFile;
+      clickSound.load();
       
-      // TESTING WITH A REAL MP3 FROM THE WEB
-      // This is a genuine MP3 file (short bell sound)
-      function playEnterSound() {
-        try {
-          // Using a real MP3 from the web to test
-          const audio = new Audio('https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3');
-          audio.volume = 0.7;
-          audio.play().catch((error) => {
-            console.log('Sound error:', error);
-          });
-        } catch(e) {
-          console.log('Sound exception:', e);
+      function playClickSound() {
+        if (soundPlayed) return;
+        soundPlayed = true;
+        clickSound.currentTime = 0;
+        const playPromise = clickSound.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(error => console.warn('Sound play failed:', error));
         }
       }
-      
-      // Water ripple effect
+
+      function preloadAndPlaySound() {
+        playClickSound();
+        document.removeEventListener('click', preloadAndPlaySound);
+      }
+      document.addEventListener('click', preloadAndPlaySound, { once: true });
+
+      // ===== LARGE WATER RIPPLE EFFECT (starting point 2cm / ~75px higher) =====
       function createWaterRipple() {
         if (ripplesTriggered) return;
         ripplesTriggered = true;
         
+        // Calculate 2cm in pixels (approximately 75-80px)
+        // Using 75px as standard, but also responsive to screen size
         const twoCmInPixels = Math.min(85, Math.max(65, window.innerHeight * 0.09));
+        // Center of screen minus 2cm upward
         const centerX = window.innerWidth / 2;
         const centerY = (window.innerHeight / 2) - twoCmInPixels;
         
+        // Clear any existing ripples
         rippleContainer.innerHTML = '';
         
+        // Create primary ripple (largest, most visible) - position 2cm higher
         const ripple1 = document.createElement('div');
         ripple1.className = 'water-ripple primary animate';
         ripple1.style.left = centerX + 'px';
         ripple1.style.top = centerY + 'px';
         rippleContainer.appendChild(ripple1);
         
+        // Create secondary ripple (medium, delayed)
         const ripple2 = document.createElement('div');
         ripple2.className = 'water-ripple secondary animate';
         ripple2.style.left = centerX + 'px';
         ripple2.style.top = centerY + 'px';
         rippleContainer.appendChild(ripple2);
         
+        // Create tertiary ripple (subtle, longer delay)
         const ripple3 = document.createElement('div');
         ripple3.className = 'water-ripple tertiary animate';
         ripple3.style.left = centerX + 'px';
         ripple3.style.top = centerY + 'px';
         rippleContainer.appendChild(ripple3);
         
+        // Clean up ripples after animation completes
         setTimeout(() => {
           rippleContainer.innerHTML = '';
         }, 2000);
       }
-      
-      // Initialize logo state
+
+      // ensure rising logo is hidden at start
       risingLogo.style.opacity = '0';
       risingLogo.style.bottom = '-250px';
       risingLogo.classList.remove('logo-animate-sequence');
-      
-      // Main sequence
+
       function startSequence() {
         if (animationInProgress) return;
         animationInProgress = true;
-        
-        // Play sound FIRST
-        playEnterSound();
-        
-        // Disable button
+
+        // Play the sound effect
+        playClickSound();
+
+        // disable button and remove pulse class
         enterBtn.disabled = true;
         enterBtn.classList.remove('pulse-button');
         enterBtn.style.animation = 'none';
         document.body.style.cursor = 'wait';
-        
-        // Fade out button and watermark
+
+        // Fade out ENTER button container + background watermark logo
         container.classList.add('fade-out');
         if (bgWatermark) bgWatermark.classList.add('fade-out');
-        
+
         setTimeout(() => {
           container.style.visibility = 'hidden';
           if (bgWatermark) bgWatermark.style.visibility = 'hidden';
           
+          // Prepare rising logo
           risingLogo.style.visibility = 'visible';
           risingLogo.style.opacity = '0';
           risingLogo.style.bottom = '-250px';
           risingLogo.style.transform = 'translateX(-50%)';
           
+          // force reflow
           void risingLogo.offsetHeight;
+          
+          // trigger the 3-step animation
           risingLogo.classList.add('logo-animate-sequence');
           
+          // Trigger large water ripple effect when logo reaches center (at ~0.9s)
           setTimeout(() => {
             createWaterRipple();
           }, 900);
           
+          // redirect after animation completes
+          const logoAnimationDuration = 2850;
           setTimeout(() => {
             window.location.href = targetURL;
-          }, 3500);
+          }, 550 + logoAnimationDuration);
           
         }, 520);
       }
-      
-      // Attach click event
+
+      // attach click event
       if (enterBtn) {
         enterBtn.addEventListener('click', startSequence);
       }
-      
-      console.log('TEST MODE: Using real MP3 from the web');
+
+      window.addEventListener('load', function() {
+        risingLogo.style.opacity = '0';
+      });
     })();
   </script>
 </body>
