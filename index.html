@@ -402,12 +402,10 @@
         if (soundPlayed) return;
         soundPlayed = true;
         clickSound.currentTime = 0;
-        clickSound.volume = 0.5; // 50% volume - adjust as needed (0.0 to 1.0)
+        clickSound.volume = 0.5;
         const playPromise = clickSound.play();
         if (playPromise !== undefined) {
-          playPromise.catch(error => {
-            console.warn('Sound play failed:', error);
-          });
+          playPromise.catch(error => console.warn('Sound play failed:', error));
         }
       }
 
@@ -445,10 +443,42 @@
         }, 2000);
       }
 
-      // Ensure rising logo is hidden at start
-      risingLogo.style.opacity = '0';
-      risingLogo.style.bottom = '-250px';
-      risingLogo.classList.remove('logo-animate-sequence');
+      // RESET FUNCTION - restores page to initial state
+      function resetPage() {
+        animationInProgress = false;
+        soundPlayed = false;
+        ripplesTriggered = false;
+        
+        // Restore enter button container
+        container.style.visibility = 'visible';
+        container.style.opacity = '1';
+        container.classList.remove('fade-out');
+        
+        // Restore watermark
+        if (bgWatermark) {
+          bgWatermark.style.visibility = 'visible';
+          bgWatermark.style.opacity = '0.14';
+          bgWatermark.classList.remove('fade-out');
+        }
+        
+        // Reset rising logo
+        risingLogo.style.visibility = 'hidden';
+        risingLogo.style.opacity = '0';
+        risingLogo.style.bottom = '-250px';
+        risingLogo.classList.remove('logo-animate-sequence');
+        
+        // Re-enable button
+        enterBtn.disabled = false;
+        enterBtn.classList.add('pulse-button');
+        enterBtn.style.animation = '';
+        document.body.style.cursor = 'default';
+        
+        // Clear any ripples
+        rippleContainer.innerHTML = '';
+      }
+
+      // Initial reset on page load
+      resetPage();
 
       function startSequence() {
         if (animationInProgress) return;
@@ -489,52 +519,21 @@
         }, 520);
       }
 
-      // Attach click event ONLY to the ENTER button
       if (enterBtn) {
         enterBtn.addEventListener('click', startSequence);
         enterBtn.addEventListener('contextmenu', (e) => e.preventDefault());
       }
 
-      // ===== RESET PAGE WHEN RETURNING VIA BACK/FORWARD BUTTONS =====
+      // Handle back/forward navigation - pageshow event
       window.addEventListener('pageshow', function(event) {
-        // Reset all flags and UI elements
-        animationInProgress = false;
-        soundPlayed = false;
-        ripplesTriggered = false;
-        
-        // Show and reset enter button container
-        container.style.visibility = 'visible';
-        container.classList.remove('fade-out');
-        
-        // Show and reset watermark
-        if (bgWatermark) {
-          bgWatermark.style.visibility = 'visible';
-          bgWatermark.classList.remove('fade-out');
-        }
-        
-        // Reset rising logo
-        risingLogo.style.visibility = 'hidden';
-        risingLogo.style.opacity = '0';
-        risingLogo.style.bottom = '-250px';
-        risingLogo.classList.remove('logo-animate-sequence');
-        
-        // Re-enable button
-        enterBtn.disabled = false;
-        enterBtn.classList.add('pulse-button');
-        document.body.style.cursor = 'default';
-        
-        // Clear ripple container
-        rippleContainer.innerHTML = '';
-        
-        // Reset sound played flag so sound can play again if needed
-        soundPlayed = false;
-        
-        console.log('Page reset after navigation');
+        resetPage();
       });
-
-      window.addEventListener('load', function() {
-        risingLogo.style.opacity = '0';
-        clickSound.load();
+      
+      // Also reset when page becomes visible again (for some mobile browsers)
+      document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) {
+          resetPage();
+        }
       });
     })();
   </script>
