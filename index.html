@@ -339,6 +339,12 @@
         softGlowOnce 0.65s ease-out 0.95s forwards,
         riseUpDisappear 1.1s cubic-bezier(0.4, 0, 0.2, 1) 1.7s forwards;
     }
+
+    /* Loading state for button - mimics prayer button */
+    .enter-btn.loading {
+      transform: scale(0.98);
+      transition: transform 0.1s ease;
+    }
   </style>
 </head>
 <body>
@@ -367,11 +373,12 @@
       let animationInProgress = false;
       let ripplesTriggered = false;
       
-      // EXACT same sound function as working page
+      // EXACT SAME pattern as the working prayer button
       function playEnterSound() {
         try {
           const audio = new Audio('click-sound.mp3');
           audio.volume = 0.7;
+          // IMPORTANT: .catch(() => {}) - exactly like working page
           audio.play().catch(() => {});
         } catch(e) {}
       }
@@ -415,15 +422,20 @@
       risingLogo.style.bottom = '-250px';
       risingLogo.classList.remove('logo-animate-sequence');
       
-      // Main sequence - sound plays IMMEDIATELY at the very start
-      function startSequence() {
+      // Main sequence - MIMICS THE PRAYER BUTTON EXACTLY
+      async function startSequence() {
         if (animationInProgress) return;
         animationInProgress = true;
         
-        // PLAY SOUND FIRST - IMMEDIATELY - no delays, no async, nothing before this
+        // Add loading state like prayer button
+        enterBtn.classList.add('loading');
+        
+        // PLAY SOUND - EXACT same as working page
         playEnterSound();
         
-        // Everything else happens AFTER sound starts playing
+        // Small delay to ensure sound starts (like prayer button's loading animation)
+        await new Promise(r => setTimeout(r, 50));
+        
         // Disable button
         enterBtn.disabled = true;
         enterBtn.classList.remove('pulse-button');
@@ -459,13 +471,10 @@
       
       // Attach click event
       if (enterBtn) {
-        // Remove any existing listeners to be safe
-        const newBtn = enterBtn.cloneNode(true);
-        enterBtn.parentNode.replaceChild(newBtn, enterBtn);
-        newBtn.addEventListener('click', startSequence);
+        enterBtn.addEventListener('click', startSequence);
       }
       
-      console.log('Ready - Click ENTER, sound plays immediately');
+      console.log('Ready - Using prayer button pattern');
     })();
   </script>
 </body>
