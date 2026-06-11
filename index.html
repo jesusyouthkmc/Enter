@@ -355,9 +355,6 @@
     <div class="launch-sub">Jesus Youth KMC · Kottayam Medical College Campus Ministry</div>
   </div>
 
-  <!-- Hidden audio element that gets unlocked on first touch -->
-  <audio id="hiddenAudio" preload="auto" style="display: none;"></audio>
-
   <script>
     (function() {
       const enterBtn = document.getElementById('enterBtn');
@@ -369,72 +366,14 @@
       
       let animationInProgress = false;
       let ripplesTriggered = false;
-      let audioUnlocked = false;
       
-      // Detect iPad
-      const isIPad = /iPad/.test(navigator.userAgent) || 
-                     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-      
-      // Create audio elements
-      const clickSound = new Audio('click-sound.mp3');
-      clickSound.volume = 0.8;
-      clickSound.preload = 'auto';
-      
-      const hiddenAudio = document.getElementById('hiddenAudio');
-      hiddenAudio.src = 'click-sound.mp3';
-      hiddenAudio.volume = 0;
-      hiddenAudio.preload = 'auto';
-      
-      // iPad-specific unlock: play silent audio first
-      function unlockAudioOniPad() {
-        if (!isIPad) return Promise.resolve(true);
-        if (audioUnlocked) return Promise.resolve(true);
-        
-        return new Promise((resolve) => {
-          // Play silent audio to unlock the audio context on iPad
-          hiddenAudio.volume = 0;
-          hiddenAudio.currentTime = 0;
-          
-          const playPromise = hiddenAudio.play();
-          if (playPromise !== undefined) {
-            playPromise.then(() => {
-              console.log('iPad audio unlocked');
-              audioUnlocked = true;
-              hiddenAudio.pause();
-              hiddenAudio.currentTime = 0;
-              resolve(true);
-            }).catch(() => {
-              console.log('iPad unlock failed, will try on click');
-              resolve(false);
-            });
-          } else {
-            resolve(false);
-          }
-        });
-      }
-      
-      // Play sound function - iPad specific approach
+      // EXACT same sound function as working page
       function playEnterSound() {
-        return new Promise((resolve) => {
-          try {
-            // For iPad: use the pre-unlocked audio or try regular play
-            if (isIPad && audioUnlocked) {
-              // Use a fresh audio instance for actual sound
-              const sound = new Audio('click-sound.mp3');
-              sound.volume = 0.8;
-              sound.play().catch(() => {});
-              resolve(true);
-            } else {
-              // Regular play for iPhone or if iPad not unlocked yet
-              const sound = new Audio('click-sound.mp3');
-              sound.volume = 0.8;
-              sound.play().catch(() => {});
-              resolve(true);
-            }
-          } catch(e) {
-            resolve(false);
-          }
-        });
+        try {
+          const audio = new Audio('click-sound.mp3');
+          audio.volume = 0.7;
+          audio.play().catch(() => {});
+        } catch(e) {}
       }
       
       // Water ripple effect
@@ -476,14 +415,15 @@
       risingLogo.style.bottom = '-250px';
       risingLogo.classList.remove('logo-animate-sequence');
       
-      // Main sequence
-      async function startSequence() {
+      // Main sequence - sound plays IMMEDIATELY at the very start
+      function startSequence() {
         if (animationInProgress) return;
         animationInProgress = true;
         
-        // Play sound (iPad will use unlocked audio)
-        await playEnterSound();
+        // PLAY SOUND FIRST - IMMEDIATELY - no delays, no async, nothing before this
+        playEnterSound();
         
+        // Everything else happens AFTER sound starts playing
         // Disable button
         enterBtn.disabled = true;
         enterBtn.classList.remove('pulse-button');
@@ -517,27 +457,15 @@
         }, 520);
       }
       
-      // iPad: Unlock audio on any touch before ENTER button
-      if (isIPad) {
-        const unlockOnTouch = async () => {
-          await unlockAudioOniPad();
-          document.removeEventListener('touchstart', unlockOnTouch);
-          document.removeEventListener('touchend', unlockOnTouch);
-        };
-        document.addEventListener('touchstart', unlockOnTouch);
-        document.addEventListener('touchend', unlockOnTouch);
-      }
-      
       // Attach click event
       if (enterBtn) {
-        enterBtn.addEventListener('click', startSequence);
+        // Remove any existing listeners to be safe
+        const newBtn = enterBtn.cloneNode(true);
+        enterBtn.parentNode.replaceChild(newBtn, enterBtn);
+        newBtn.addEventListener('click', startSequence);
       }
       
-      // Preload audio
-      clickSound.load();
-      hiddenAudio.load();
-      
-      console.log('Ready - ' + (isIPad ? 'iPad detected, using special audio unlock' : 'iPhone detected'));
+      console.log('Ready - Click ENTER, sound plays immediately');
     })();
   </script>
 </body>
