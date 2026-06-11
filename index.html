@@ -394,74 +394,58 @@
       let ripplesTriggered = false;
 
       // ===== SOUND SETUP =====
-      // Sound file name (ensure 'click-sound.mp3' exists in the same directory)
       const soundFile = 'click-sound.mp3';
       clickSound.src = soundFile;
       clickSound.load();
       
-      // Function to play the click sound
       function playClickSound() {
         if (soundPlayed) return;
         soundPlayed = true;
-        
-        // Reset and play
         clickSound.currentTime = 0;
+        clickSound.volume = 0.5; // 50% volume - adjust as needed (0.0 to 1.0)
         const playPromise = clickSound.play();
         if (playPromise !== undefined) {
           playPromise.catch(error => {
             console.warn('Sound play failed:', error);
-            // Some browsers require user interaction first; we already have it via button click
-            // but just in case, retry with a small delay isn't needed because button click is direct user gesture
           });
         }
       }
 
-      // IMPORTANT: REMOVED the global document click listener that was causing sound on any click.
-      // Sound will ONLY play when the ENTER button is clicked.
-      // No automatic preload sound on document click anymore.
-
-      // ===== LARGE WATER RIPPLE EFFECT (starting point 2cm / ~75px higher) =====
+      // ===== LARGE WATER RIPPLE EFFECT =====
       function createWaterRipple() {
         if (ripplesTriggered) return;
         ripplesTriggered = true;
         
-        // Calculate 2cm in pixels (approximately 75-80px)
         const twoCmInPixels = Math.min(85, Math.max(65, window.innerHeight * 0.09));
-        // Center of screen minus 2cm upward
         const centerX = window.innerWidth / 2;
         const centerY = (window.innerHeight / 2) - twoCmInPixels;
         
-        // Clear any existing ripples
         rippleContainer.innerHTML = '';
         
-        // Create primary ripple (largest, most visible)
         const ripple1 = document.createElement('div');
         ripple1.className = 'water-ripple primary animate';
         ripple1.style.left = centerX + 'px';
         ripple1.style.top = centerY + 'px';
         rippleContainer.appendChild(ripple1);
         
-        // Create secondary ripple (medium, delayed)
         const ripple2 = document.createElement('div');
         ripple2.className = 'water-ripple secondary animate';
         ripple2.style.left = centerX + 'px';
         ripple2.style.top = centerY + 'px';
         rippleContainer.appendChild(ripple2);
         
-        // Create tertiary ripple (subtle, longer delay)
         const ripple3 = document.createElement('div');
         ripple3.className = 'water-ripple tertiary animate';
         ripple3.style.left = centerX + 'px';
         ripple3.style.top = centerY + 'px';
         rippleContainer.appendChild(ripple3);
         
-        // Clean up ripples after animation completes
         setTimeout(() => {
           rippleContainer.innerHTML = '';
         }, 2000);
       }
 
-      // ensure rising logo is hidden at start
+      // Ensure rising logo is hidden at start
       risingLogo.style.opacity = '0';
       risingLogo.style.bottom = '-250px';
       risingLogo.classList.remove('logo-animate-sequence');
@@ -470,16 +454,13 @@
         if (animationInProgress) return;
         animationInProgress = true;
 
-        // Play the sound effect (only on button click)
         playClickSound();
 
-        // disable button and remove pulse class
         enterBtn.disabled = true;
         enterBtn.classList.remove('pulse-button');
         enterBtn.style.animation = 'none';
         document.body.style.cursor = 'wait';
 
-        // Fade out ENTER button container + background watermark logo
         container.classList.add('fade-out');
         if (bgWatermark) bgWatermark.classList.add('fade-out');
 
@@ -487,24 +468,19 @@
           container.style.visibility = 'hidden';
           if (bgWatermark) bgWatermark.style.visibility = 'hidden';
           
-          // Prepare rising logo
           risingLogo.style.visibility = 'visible';
           risingLogo.style.opacity = '0';
           risingLogo.style.bottom = '-250px';
           risingLogo.style.transform = 'translateX(-50%)';
           
-          // force reflow
           void risingLogo.offsetHeight;
           
-          // trigger the 3-step animation
           risingLogo.classList.add('logo-animate-sequence');
           
-          // Trigger large water ripple effect when logo reaches center (at ~0.9s)
           setTimeout(() => {
             createWaterRipple();
           }, 900);
           
-          // redirect after animation completes
           const logoAnimationDuration = 2850;
           setTimeout(() => {
             window.location.href = targetURL;
@@ -513,38 +489,53 @@
         }, 520);
       }
 
-      // Attach click event ONLY to the ENTER button.
-      // No other click listeners on document or body.
+      // Attach click event ONLY to the ENTER button
       if (enterBtn) {
         enterBtn.addEventListener('click', startSequence);
+        enterBtn.addEventListener('contextmenu', (e) => e.preventDefault());
       }
 
-      // Ensure that no stray click listeners are attached elsewhere.
-      // For safety, prevent accidental sound if someone clicks something else (like the subtitle).
-      // The subtitle area is inside .enter-container but it's not interactive, but just in case
-      // we don't attach anything to it.
-
-      // Additionally, to satisfy browser autoplay policies, we don't need any pre-click preloading
-      // because the sound is played directly inside a user-initiated click handler (startSequence).
-      // That's fully compliant with all modern browsers.
-
-      // For extra security: disable any default contextmenu on button (just for cleanliness)
-      enterBtn.addEventListener('contextmenu', (e) => e.preventDefault());
+      // ===== RESET PAGE WHEN RETURNING VIA BACK/FORWARD BUTTONS =====
+      window.addEventListener('pageshow', function(event) {
+        // Reset all flags and UI elements
+        animationInProgress = false;
+        soundPlayed = false;
+        ripplesTriggered = false;
+        
+        // Show and reset enter button container
+        container.style.visibility = 'visible';
+        container.classList.remove('fade-out');
+        
+        // Show and reset watermark
+        if (bgWatermark) {
+          bgWatermark.style.visibility = 'visible';
+          bgWatermark.classList.remove('fade-out');
+        }
+        
+        // Reset rising logo
+        risingLogo.style.visibility = 'hidden';
+        risingLogo.style.opacity = '0';
+        risingLogo.style.bottom = '-250px';
+        risingLogo.classList.remove('logo-animate-sequence');
+        
+        // Re-enable button
+        enterBtn.disabled = false;
+        enterBtn.classList.add('pulse-button');
+        document.body.style.cursor = 'default';
+        
+        // Clear ripple container
+        rippleContainer.innerHTML = '';
+        
+        // Reset sound played flag so sound can play again if needed
+        soundPlayed = false;
+        
+        console.log('Page reset after navigation');
+      });
 
       window.addEventListener('load', function() {
         risingLogo.style.opacity = '0';
-        // optional: preload sound more reliably? No need, but we can ensure audio is ready.
-        // The load() already called. This is fine.
-        clickSound.load(); // reload just in case for fresh state
+        clickSound.load();
       });
-      
-      // Also, if there's any leftover global click listener that might have been set by mistake,
-      // we explicitly remove any possible interference by not setting any. The previous code had:
-      // document.addEventListener('click', preloadAndPlaySound, { once: true });
-      // That has been completely removed, ensuring no accidental sound playback.
-      
-      // In case of any future developer oversight, we can also add a small log to confirm.
-      console.log('Sound will only play when ENTER button is clicked. Global click listener removed.');
     })();
   </script>
 </body>
