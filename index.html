@@ -367,64 +367,14 @@
       
       let animationInProgress = false;
       let ripplesTriggered = false;
-      let soundPlayed = false;
       
-      // Create audio element with your existing click-sound.mp3 file
-      const clickSound = new Audio();
-      clickSound.src = 'click-sound.mp3';  // Using your existing file
-      clickSound.preload = 'auto';
-      clickSound.volume = 0.8;
-      
-      // Load the sound
-      clickSound.load();
-      
-      // Function to play sound - simplified and robust
-      function playClickSound() {
-        if (soundPlayed) return;
-        
-        // Reset to beginning and play
-        clickSound.currentTime = 0;
-        
-        const playPromise = clickSound.play();
-        
-        if (playPromise !== undefined) {
-          playPromise
-            .then(() => {
-              console.log('✓ Sound played successfully!');
-              soundPlayed = true;
-            })
-            .catch(error => {
-              console.error('✗ Sound failed:', error.name, error.message);
-              
-              // Fallback: Try WebAudio beep if regular audio fails
-              try {
-                const AudioCtx = window.AudioContext || window.webkitAudioContext;
-                if (AudioCtx) {
-                  const ctx = new AudioCtx();
-                  const now = ctx.currentTime;
-                  const gain = ctx.createGain();
-                  gain.connect(ctx.destination);
-                  gain.gain.value = 0.3;
-                  
-                  // Create a short beep
-                  const osc = ctx.createOscillator();
-                  osc.connect(gain);
-                  osc.frequency.value = 880;
-                  osc.start();
-                  gain.gain.exponentialRampToValueAtTime(0.00001, now + 0.15);
-                  osc.stop(now + 0.15);
-                  
-                  ctx.resume().then(() => {
-                    console.log('✓ Fallback beep played');
-                    soundPlayed = true;
-                    setTimeout(() => ctx.close(), 200);
-                  });
-                }
-              } catch(e) {
-                console.error('✗ Fallback also failed:', e);
-              }
-            });
-        }
+      // ============ SIMPLE SOUND FUNCTION (copied from working page) ============
+      function playEnterSound() {
+        try {
+          const audio = new Audio('click-sound.mp3');
+          audio.volume = 0.7;
+          audio.play().catch(() => {});
+        } catch(e) {}
       }
       
       // Water ripple effect
@@ -467,16 +417,12 @@
       risingLogo.classList.remove('logo-animate-sequence');
       
       // Main sequence when ENTER is clicked
-      function startSequence(event) {
-        event.preventDefault();
-        
+      function startSequence() {
         if (animationInProgress) return;
         animationInProgress = true;
         
-        console.log('ENTER clicked - playing sound...');
-        
-        // PLAY THE SOUND - This runs directly from user click
-        playClickSound();
+        // PLAY THE SOUND - Using the same simple method that works on the other page
+        playEnterSound();
         
         // Disable button
         enterBtn.disabled = true;
@@ -519,26 +465,7 @@
         enterBtn.addEventListener('click', startSequence);
       }
       
-      // Pre-warm audio on first touch (helps iOS unlock)
-      let warmedUp = false;
-      function warmupAudio() {
-        if (warmedUp) return;
-        warmedUp = true;
-        console.log('Warming up audio system...');
-        // Just load and prepare the audio without playing
-        clickSound.load();
-        document.removeEventListener('touchstart', warmupAudio);
-        document.removeEventListener('touchend', warmupAudio);
-        document.removeEventListener('mousedown', warmupAudio);
-      }
-      
-      document.addEventListener('touchstart', warmupAudio);
-      document.addEventListener('touchend', warmupAudio);
-      document.addEventListener('mousedown', warmupAudio);
-      
-      console.log('=== Page Ready ===');
-      console.log('Sound file: click-sound.mp3');
-      console.log('Click ENTER button to play sound and continue');
+      console.log('Ready - Click ENTER button');
     })();
   </script>
 </body>
