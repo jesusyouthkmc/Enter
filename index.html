@@ -23,6 +23,7 @@
       overflow: hidden;
     }
 
+    /* subtle animated overlay for depth */
     .animated-gradient {
       position: fixed;
       top: 0;
@@ -41,6 +42,7 @@
       100% { background-position: 0% 50%; }
     }
 
+    /* light vignette for depth */
     .vignette {
       position: fixed;
       top: 0;
@@ -52,7 +54,7 @@
       z-index: 2;
     }
 
-    /* ===== WATER DROPLET RIPPLE EFFECT ===== */
+    /* ===== LARGE WATER DROPLET RIPPLE EFFECT ===== */
     .ripple-container {
       position: fixed;
       top: 0;
@@ -74,6 +76,7 @@
       pointer-events: none;
     }
 
+    /* Primary ripple - largest and most visible */
     .water-ripple.primary {
       background: radial-gradient(circle, 
         rgba(255, 255, 255, 0.5) 0%, 
@@ -87,6 +90,7 @@
       animation: largeRippleExpand 1.5s ease-out forwards;
     }
 
+    /* Secondary ripple - slightly delayed */
     .water-ripple.secondary {
       background: radial-gradient(circle, 
         rgba(255, 255, 255, 0.35) 0%, 
@@ -99,6 +103,7 @@
       animation: largeRippleExpand 1.5s ease-out 0.25s forwards;
     }
 
+    /* Tertiary ripple - longest delay, most subtle */
     .water-ripple.tertiary {
       background: radial-gradient(circle, 
         rgba(255, 255, 255, 0.25) 0%, 
@@ -137,6 +142,7 @@
       }
     }
 
+    /* Extra large screens need even bigger ripples */
     @media (min-width: 1200px) {
       @keyframes largeRippleExpand {
         0% {
@@ -228,6 +234,7 @@
       transition: opacity 0.55s cubic-bezier(0.2, 0.9, 0.4, 1.1);
     }
 
+    /* ===== PULSING ANIMATION FOR ENTER BUTTON ===== */
     @keyframes pulse {
       0% {
         transform: scale(1);
@@ -252,6 +259,7 @@
       transform: scale(1.05);
     }
 
+    /* ENTER button styling */
     .enter-btn {
       background: rgba(255, 255, 255, 0.12);
       backdrop-filter: blur(10px);
@@ -289,12 +297,14 @@
       .launch-sub { font-size: 0.65rem; }
     }
 
+    /* fade-out class for button container + watermark */
     .fade-out {
       opacity: 0 !important;
       transition: opacity 0.55s cubic-bezier(0.2, 0.9, 0.4, 1.1) !important;
       pointer-events: none;
     }
 
+    /* ----- ANIMATION SEQUENCE FOR RISING LOGO ----- */
     @keyframes riseToCenter {
       0% {
         bottom: -250px;
@@ -347,218 +357,149 @@
 </head>
 <body>
 
+  <!-- background depth layers -->
   <div class="animated-gradient"></div>
   <div class="vignette"></div>
+
+  <!-- Ripple Container for water droplet effect -->
   <div class="ripple-container" id="rippleContainer"></div>
 
+  <!-- BACKGROUND WATERMARK LOGO -->
   <img src="logo.png" alt="background watermark" class="bg-watermark" id="bgWatermark">
+
+  <!-- RISING LOGO -->
   <img src="logo.png" alt="Jesus Youth KMC" class="rising-logo" id="risingLogo">
 
+  <!-- ENTER BUTTON CONTAINER -->
   <div id="enterContainer" class="enter-container">
     <button id="enterBtn" class="enter-btn pulse-button">ENTER</button>
     <div class="launch-sub">Jesus Youth KMC · Kottayam Medical College Campus Ministry</div>
   </div>
 
+  <!-- Audio element for sound effect (hidden) -->
+  <audio id="clickSound" preload="auto" style="display: none;"></audio>
+
   <script>
     (function() {
-      // =====================================================
-      // UNIVERSAL SOUND SYSTEM - Works on ALL devices (iPad, iPhone, Android, Mac, Windows)
-      // Uses multiple strategies to ensure sound plays 100% of the time
-      // =====================================================
-      
       const enterBtn = document.getElementById('enterBtn');
       const container = document.getElementById('enterContainer');
       const bgWatermark = document.getElementById('bgWatermark');
       const risingLogo = document.getElementById('risingLogo');
       const rippleContainer = document.getElementById('rippleContainer');
+      const clickSound = document.getElementById('clickSound');
       const targetURL = 'https://jesusyouthkmc.github.io/jykmc.github.io/';
-      
+
       let animationInProgress = false;
-      let ripplesTriggered = false;
       let soundPlayed = false;
+      let ripplesTriggered = false;
+
+      // ===== SOUND SETUP =====
+      const soundFile = 'click-sound.mp3'; // â CHANGE THIS to your sound file name
+      clickSound.src = soundFile;
+      clickSound.load();
       
-      // ----- Create a reliable click sound using Web Audio (synthesized, works everywhere, no external file needed) -----
-      // This is the most reliable approach because it doesn't depend on external MP3 files
-      let audioContext = null;
-      let clickBuffer = null;
-      
-      function createClickBuffer(context) {
-        const sampleRate = context.sampleRate;
-        const duration = 0.15; // 150ms click
-        const frameCount = sampleRate * duration;
-        const buffer = context.createBuffer(1, frameCount, sampleRate);
-        const data = buffer.getChannelData(0);
-        
-        // Create a pleasant "click" sound: short decay sine with some harmonic richness
-        for (let i = 0; i < frameCount; i++) {
-          const t = i / sampleRate;
-          // Exponential decay envelope
-          const envelope = Math.exp(-t * 18) * 0.5;
-          // Main frequency sweeps from 1200Hz down to 400Hz for a crisp tap
-          const freq = 1100 * (1 - t * 2.5) + 400;
-          let sample = Math.sin(2 * Math.PI * freq * t) * envelope;
-          // Add a tiny bit of harmonic for presence
-          sample += Math.sin(2 * Math.PI * (freq * 2.1) * t) * envelope * 0.2;
-          // Quick attack
-          const attack = Math.min(1.0, t * 80);
-          data[i] = sample * attack * 0.7;
+      function playClickSound() {
+        if (soundPlayed) return;
+        soundPlayed = true;
+        clickSound.currentTime = 0;
+        const playPromise = clickSound.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(error => console.warn('Sound play failed:', error));
         }
-        return buffer;
       }
-      
-      // Initialize AudioContext on first user interaction (required by browsers)
-      function initAudioContext() {
-        if (audioContext) return audioContext;
-        
-        try {
-          const AudioCtor = window.AudioContext || window.webkitAudioContext;
-          if (AudioCtor) {
-            audioContext = new AudioCtor();
-            clickBuffer = createClickBuffer(audioContext);
-          }
-        } catch (e) {
-          console.warn("Web Audio not supported:", e);
-        }
-        return audioContext;
+
+      function preloadAndPlaySound() {
+        playClickSound();
+        document.removeEventListener('click', preloadAndPlaySound);
       }
-      
-      // Play the click sound - this MUST be called from a user gesture handler
-      async function playClickSound() {
-        if (soundPlayed) return true;
-        
-        // Strategy 1: Web Audio (most reliable, works on all modern devices including iPad)
-        try {
-          const ctx = initAudioContext();
-          if (ctx && clickBuffer) {
-            // Resume context if suspended (iOS requires this)
-            if (ctx.state === 'suspended') {
-              await ctx.resume();
-            }
-            if (ctx.state === 'running') {
-              const source = ctx.createBufferSource();
-              source.buffer = clickBuffer;
-              source.connect(ctx.destination);
-              source.start(0);
-              soundPlayed = true;
-              return true;
-            }
-          }
-        } catch (e) {
-          console.warn("Web Audio play failed:", e);
-        }
-        
-        // Strategy 2: Fallback using HTMLAudioElement with a dataURI beep (no external file needed)
-        // This creates a tiny WAV beep programmatically
-        try {
-          const audioTag = new Audio();
-          // Generate a simple beep using dataURI (base64 encoded short beep)
-          // This is a fallback that works even without external click-sound.mp3
-          const beepDataURI = "data:audio/wav;base64,U3RlYWx0aCBhdWRpbyBkYXRhIHdpdGggYmFzZTY0IGVuY29kZWQgYmVlcCAtIHNob3J0IGNsaWNrIHNvdW5k";
-          // Actually generate a proper short beep using Web Audio fallback approach - but simpler: use an oscillator
-          // Instead, we'll create a quick AudioContext if not already done
-          if (!audioContext) {
-            const AudioCtor = window.AudioContext || window.webkitAudioContext;
-            if (AudioCtor) {
-              const tempCtx = new AudioCtor();
-              const osc = tempCtx.createOscillator();
-              const gain = tempCtx.createGain();
-              osc.connect(gain);
-              gain.connect(tempCtx.destination);
-              osc.frequency.value = 880;
-              gain.gain.value = 0.3;
-              await tempCtx.resume();
-              osc.start();
-              gain.gain.exponentialRampToValueAtTime(0.00001, tempCtx.currentTime + 0.15);
-              osc.stop(tempCtx.currentTime + 0.15);
-              soundPlayed = true;
-              setTimeout(() => tempCtx.close(), 200);
-              return true;
-            }
-          }
-        } catch (e) {
-          console.warn("Fallback audio failed:", e);
-        }
-        
-        return false;
-      }
-      
-      // ===== WATER RIPPLE EFFECT =====
+      document.addEventListener('click', preloadAndPlaySound, { once: true });
+
+      // ===== LARGE WATER RIPPLE EFFECT (starting point 2cm / ~75px higher) =====
       function createWaterRipple() {
         if (ripplesTriggered) return;
         ripplesTriggered = true;
         
+        // Calculate 2cm in pixels (approximately 75-80px)
+        // Using 75px as standard, but also responsive to screen size
         const twoCmInPixels = Math.min(85, Math.max(65, window.innerHeight * 0.09));
+        // Center of screen minus 2cm upward
         const centerX = window.innerWidth / 2;
         const centerY = (window.innerHeight / 2) - twoCmInPixels;
         
+        // Clear any existing ripples
         rippleContainer.innerHTML = '';
         
+        // Create primary ripple (largest, most visible) - position 2cm higher
         const ripple1 = document.createElement('div');
         ripple1.className = 'water-ripple primary animate';
         ripple1.style.left = centerX + 'px';
         ripple1.style.top = centerY + 'px';
         rippleContainer.appendChild(ripple1);
         
+        // Create secondary ripple (medium, delayed)
         const ripple2 = document.createElement('div');
         ripple2.className = 'water-ripple secondary animate';
         ripple2.style.left = centerX + 'px';
         ripple2.style.top = centerY + 'px';
         rippleContainer.appendChild(ripple2);
         
+        // Create tertiary ripple (subtle, longer delay)
         const ripple3 = document.createElement('div');
         ripple3.className = 'water-ripple tertiary animate';
         ripple3.style.left = centerX + 'px';
         ripple3.style.top = centerY + 'px';
         rippleContainer.appendChild(ripple3);
         
+        // Clean up ripples after animation completes
         setTimeout(() => {
           rippleContainer.innerHTML = '';
         }, 2000);
       }
-      
-      // Initialize logo state
+
+      // ensure rising logo is hidden at start
       risingLogo.style.opacity = '0';
       risingLogo.style.bottom = '-250px';
       risingLogo.classList.remove('logo-animate-sequence');
-      
-      // ===== MAIN SEQUENCE =====
-      async function startSequence() {
+
+      function startSequence() {
         if (animationInProgress) return;
         animationInProgress = true;
-        
-        // PLAY SOUND - this runs directly inside click handler (user gesture)
-        // It will work on iPad/iPhone because it's triggered by user click
-        await playClickSound();
-        
-        // Disable button and remove pulse
+
+        // Play the sound effect
+        playClickSound();
+
+        // disable button and remove pulse class
         enterBtn.disabled = true;
         enterBtn.classList.remove('pulse-button');
         enterBtn.style.animation = 'none';
         document.body.style.cursor = 'wait';
-        
-        // Fade out button container and watermark
+
+        // Fade out ENTER button container + background watermark logo
         container.classList.add('fade-out');
         if (bgWatermark) bgWatermark.classList.add('fade-out');
-        
+
         setTimeout(() => {
           container.style.visibility = 'hidden';
           if (bgWatermark) bgWatermark.style.visibility = 'hidden';
           
-          // Start rising logo animation
+          // Prepare rising logo
           risingLogo.style.visibility = 'visible';
           risingLogo.style.opacity = '0';
           risingLogo.style.bottom = '-250px';
           risingLogo.style.transform = 'translateX(-50%)';
           
+          // force reflow
           void risingLogo.offsetHeight;
+          
+          // trigger the 3-step animation
           risingLogo.classList.add('logo-animate-sequence');
           
-          // Trigger water ripple when logo reaches center
+          // Trigger large water ripple effect when logo reaches center (at ~0.9s)
           setTimeout(() => {
             createWaterRipple();
           }, 900);
           
-          // Redirect after animation completes
+          // redirect after animation completes
           const logoAnimationDuration = 2850;
           setTimeout(() => {
             window.location.href = targetURL;
@@ -566,78 +507,15 @@
           
         }, 520);
       }
-      
-      // Attach click event
+
+      // attach click event
       if (enterBtn) {
-        // Remove any existing listeners to avoid duplicates
-        const newBtn = enterBtn.cloneNode(true);
-        enterBtn.parentNode.replaceChild(newBtn, enterBtn);
-        const finalBtn = document.getElementById('enterBtn');
-        
-        if (finalBtn) {
-          finalBtn.addEventListener('click', startSequence);
-        }
+        enterBtn.addEventListener('click', startSequence);
       }
-      
-      // ===== PRE-WARM AUDIO CONTEXT (Silent unlock for iPad) =====
-      // On iOS/iPadOS, AudioContext is suspended until user gesture.
-      // We create it early on any touch to speed up the actual playback.
-      let warmupPerformed = false;
-      function warmupAudioOnFirstTouch() {
-        if (warmupPerformed) return;
-        warmupPerformed = true;
-        
-        try {
-          const AudioCtor = window.AudioContext || window.webkitAudioContext;
-          if (AudioCtor) {
-            const warmCtx = new AudioCtor();
-            // Create silent buffer and play it to unlock audio
-            const silentBuffer = warmCtx.createBuffer(1, 1, 22050);
-            const source = warmCtx.createBufferSource();
-            source.buffer = silentBuffer;
-            source.connect(warmCtx.destination);
-            warmCtx.resume().then(() => {
-              source.start(0);
-              // Close after a short delay
-              setTimeout(() => {
-                try { warmCtx.close(); } catch(e) {}
-              }, 100);
-            }).catch(() => {});
-          }
-        } catch(e) {}
-        
-        // Also try to initialize main AudioContext silently
-        initAudioContext();
-        
-        // Remove listeners after warmup
-        document.removeEventListener('touchstart', warmupAudioOnFirstTouch);
-        document.removeEventListener('touchend', warmupAudioOnFirstTouch);
-        document.removeEventListener('mousedown', warmupAudioOnFirstTouch);
-      }
-      
-      // Attach early touch/mouse listeners to warm up audio (but not play audible sound)
-      document.addEventListener('touchstart', warmupAudioOnFirstTouch, { passive: true });
-      document.addEventListener('touchend', warmupAudioOnFirstTouch, { passive: true });
-      document.addEventListener('mousedown', warmupAudioOnFirstTouch);
-      
-      // Also on page load, prepare but don't play
+
       window.addEventListener('load', function() {
         risingLogo.style.opacity = '0';
-        // Pre-initialize AudioContext without playing (will be suspended, but that's fine)
-        initAudioContext();
       });
-      
-      // ===== FIX FOR BUTTON: Ensure button is interactive =====
-      // Some browsers might have issues, so we double-check
-      const finalEnterBtn = document.getElementById('enterBtn');
-      if (finalEnterBtn && !finalEnterBtn.hasAttribute('data-listener-attached')) {
-        // Just to be safe, but we already attached above
-        finalEnterBtn.setAttribute('data-listener-attached', 'true');
-      }
-      
-      // Log that sound system is ready (for debugging, can be removed in production)
-      console.log('Audio system ready - click the ENTER button to hear sound and continue');
-      
     })();
   </script>
 </body>
